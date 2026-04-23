@@ -11,11 +11,11 @@ ob_start();
 
 // --- 1. CONFIGURATION ---
 
-
 $host = 'localhost';
 $dbname = 'your_db_name';
 $user = 'your_user';
 $pass = 'your_password';
+
 
 
 try {
@@ -98,239 +98,52 @@ if($tz) {
 
 function dbUpgrade($pdo)
 {
-    // 1. ALL TABLES CREATION (Fresh Install + Upgrade Safe)
+    // 1. ALL TABLES CREATION (Fresh Install Safe - No ALTERs Needed)
     $sqls = [
-        // --- A. CORE SYSTEM TABLES ---
-        "CREATE TABLE IF NOT EXISTS `system_settings` (
-            `setting_key` varchar(50) NOT NULL,
-            `setting_value` text,
-            PRIMARY KEY (`setting_key`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-
-        "CREATE TABLE IF NOT EXISTS `users` (
-            `Id` int(11) NOT NULL AUTO_INCREMENT,
-            `Username` varchar(50) NOT NULL,
-            `Password` varchar(255) NOT NULL,
-            `Role` varchar(20) DEFAULT 'user',
-            `FullName` varchar(100),
-            `IsActive` tinyint(1) DEFAULT 1,
-            PRIMARY KEY (`Id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-
-        "CREATE TABLE IF NOT EXISTS `system_roles` (
-            `Id` int(11) NOT NULL AUTO_INCREMENT,
-            `RoleName` varchar(50) NOT NULL UNIQUE,
-            `Permissions` text,
-            PRIMARY KEY (`Id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-
-        // --- B. ACADEMIC STRUCTURE ---
-        "CREATE TABLE IF NOT EXISTS `enrollmentsession` (
-            `Id` int(11) NOT NULL AUTO_INCREMENT,
-            `Name` varchar(100) NOT NULL,
-            `IsActive` tinyint(1) DEFAULT 0,
-            `Timings` varchar(100) DEFAULT NULL,
-            `SortOrder` int(11) DEFAULT 0,
-            PRIMARY KEY (`Id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-
-        "CREATE TABLE IF NOT EXISTS `classmanifest` (
-            `Id` int(11) NOT NULL AUTO_INCREMENT,
-            `ClassName` varchar(100) NOT NULL,
-            `Section` varchar(50),
-            `WhatsappLink` text,
-            `MinAge` int(11) DEFAULT 0,
-            `MaxAge` int(11) DEFAULT 99,
-            `assigned_user_id` int(11) DEFAULT NULL,
-            PRIMARY KEY (`Id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-
-        // --- C. STUDENTS & ENROLLMENT ---
-        "CREATE TABLE IF NOT EXISTS `students` (
-            `Id` int(11) NOT NULL AUTO_INCREMENT,
-            `Name` varchar(100) NOT NULL,
-            `FatherName` varchar(100),
-            `Gender` enum('Male','Female') DEFAULT 'Male',
-            `Dob` date,
-            `MobileNumber` varchar(20),
-            `Address` text,
-            `School` text,
-            `Cnic` varchar(20),
-            `Notes` text,
-            PRIMARY KEY (`Id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-
-        "CREATE TABLE IF NOT EXISTS `enrollment` (
-            `Id` int(11) NOT NULL AUTO_INCREMENT,
-            `StudentId` int(11) NOT NULL,
-            `SessionId` int(11) NOT NULL,
-            `ClassId` int(11) NOT NULL,
-            `EnrollmentDate` date,
-            `IsActive` tinyint(1) DEFAULT 1,
-            `enrollment_fee` decimal(10,2) DEFAULT 0,
-            `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (`Id`),
-            UNIQUE KEY `unique_enr` (`StudentId`, `SessionId`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-
-        "CREATE TABLE IF NOT EXISTS `attendance` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `enrollment_id` int(11) NOT NULL,
-            `date` date NOT NULL,
-            `status` varchar(20) NOT NULL,
-            `marked_by` int(11) NOT NULL,
-            PRIMARY KEY (`id`),
-            UNIQUE KEY `unique_att` (`enrollment_id`, `date`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-
-        // --- D. EXAMS & RESULTS ---
-        "CREATE TABLE IF NOT EXISTS `exams` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `name` varchar(100) NOT NULL,
-            `session_id` int(11) NOT NULL,
-            `class_id` int(11) NOT NULL,
-            `total_marks` int(11) NOT NULL,
-            `date` date,
-            PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-
-        "CREATE TABLE IF NOT EXISTS `exam_results` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `exam_id` int(11) NOT NULL,
-            `enrollment_id` int(11) NOT NULL,
-            `obtained_marks` float NOT NULL,
-            PRIMARY KEY (`id`),
-            UNIQUE KEY `unique_result` (`exam_id`, `enrollment_id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-
-        // --- E. FINANCE & CARDS ---
-        "CREATE TABLE IF NOT EXISTS `hasanaat_cards` (
-            `Id` int(11) NOT NULL AUTO_INCREMENT,
-            `CardNumber` varchar(50) NOT NULL UNIQUE,
-            `HolderName` varchar(100) NOT NULL,
-            `FatherName` varchar(100),
-            `Reference` varchar(100),
-            `Mobile` varchar(20),
-            `CardType` varchar(50) DEFAULT 'Standard',
-            `TotalAmount` decimal(15,2) DEFAULT 0,
-            `IssueDate` date,
-            `Status` enum('Active','Completed','Cancelled') DEFAULT 'Active',
-            `Notes` text,
-            PRIMARY KEY (`Id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-
-        "CREATE TABLE IF NOT EXISTS `hasanaat_payments` (
-            `Id` int(11) NOT NULL AUTO_INCREMENT,
-            `CardId` int(11) NOT NULL,
-            `Amount` decimal(15,2) NOT NULL,
-            `Date` date NOT NULL,
-            `ReceivedBy` int(11),
-            `Remarks` text,
-            PRIMARY KEY (`Id`),
-            FOREIGN KEY (`CardId`) REFERENCES `hasanaat_cards`(`Id`) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-
+        "CREATE TABLE IF NOT EXISTS `system_settings` (`setting_key` varchar(50) NOT NULL, `setting_value` text, PRIMARY KEY (`setting_key`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `users` (`Id` int(11) NOT NULL AUTO_INCREMENT, `name` varchar(100) NOT NULL, `email` varchar(100) UNIQUE, `password` varchar(255) NOT NULL, `role` varchar(50) DEFAULT 'user', PRIMARY KEY (`Id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `system_roles` (`Id` int(11) NOT NULL AUTO_INCREMENT, `role_name` varchar(50) NOT NULL UNIQUE, `permissions` text, PRIMARY KEY (`Id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `activity_logs` (`Id` int(11) NOT NULL AUTO_INCREMENT, `user_id` int(11), `action` varchar(50), `details` text, `ip_address` varchar(45), `created_at` timestamp DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`Id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `enrollmentsession` (`Id` int(11) NOT NULL AUTO_INCREMENT, `Name` varchar(100) NOT NULL, `IsActive` tinyint(1) DEFAULT 0, `Timings` varchar(100) DEFAULT NULL, `SortOrder` int(11) DEFAULT 0, PRIMARY KEY (`Id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `classmanifest` (`Id` int(11) NOT NULL AUTO_INCREMENT, `Class` varchar(50) NOT NULL, `ClassName` varchar(100) NOT NULL, `EnrollmentType` varchar(50), `Section` varchar(50), `WhatsappLink` text, `MinAge` int(11) DEFAULT 0, `MaxAge` int(11) DEFAULT 99, `assigned_user_id` int(11) DEFAULT NULL, `session_id` int(11) DEFAULT NULL, PRIMARY KEY (`Id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `class_teachers` (`id` int(11) NOT NULL AUTO_INCREMENT, `class_id` int(11) NOT NULL, `user_id` int(11) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `students` (`Id` int(11) NOT NULL AUTO_INCREMENT, `Name` varchar(100) NOT NULL, `Paternity` varchar(100), `Gender` enum('Male','Female') DEFAULT 'Male', `DOB` date, `MobileNumberFather` varchar(20), `MobileNumberMother` varchar(20), `Address` text, `School` text, `Cnic` varchar(20), `Notes` text, PRIMARY KEY (`Id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `enrollment` (`Id` int(11) NOT NULL AUTO_INCREMENT, `StudentId` int(11) NOT NULL, `EnrollmentSessionId` int(11) NOT NULL, `Class` varchar(50) NOT NULL, `EnrollmentDate` date, `IsActive` tinyint(1) DEFAULT 1, `batch_id` varchar(50) DEFAULT NULL, `enrollment_fee` decimal(10,2) DEFAULT 0, `individual_monthly_fee` decimal(10,2) DEFAULT 0, `concession_remarks` text, `collected_by` int(11) DEFAULT NULL, `created_at` timestamp DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`Id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `attendance` (`id` int(11) NOT NULL AUTO_INCREMENT, `enrollment_id` int(11) NOT NULL, `date` date NOT NULL, `status` varchar(20) NOT NULL, `marked_by` int(11) NOT NULL, PRIMARY KEY (`id`), UNIQUE KEY `unique_att` (`enrollment_id`, `date`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `exams` (`id` int(11) NOT NULL AUTO_INCREMENT, `name` varchar(100) NOT NULL, `session_id` varchar(50) NOT NULL, `class_id` varchar(50) NOT NULL, `total_marks` int(11) NOT NULL, `date` date, `att_start_date` date, `att_end_date` date, `gift_threshold` int(11) DEFAULT 1500, `gift_deduction` int(11) DEFAULT 1500, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `exam_results` (`id` int(11) NOT NULL AUTO_INCREMENT, `exam_id` int(11) NOT NULL, `enrollment_id` int(11) NOT NULL, `obtained_marks` float NOT NULL, `calculated_payout` int(11) DEFAULT 0, PRIMARY KEY (`id`), UNIQUE KEY `unique_result` (`exam_id`, `enrollment_id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `round_table_records` (`id` int(11) NOT NULL AUTO_INCREMENT, `session_id` varchar(50), `class_id` varchar(50), `date` date, `enrollment_id` int(11), `position` int(11), `reward_amount` int(11), PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `activities_records` (`id` int(11) NOT NULL AUTO_INCREMENT, `session_id` varchar(50), `class_id` varchar(50), `date` date, `enrollment_id` int(11), `reward_type` varchar(50), `qty` int(11), PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `hasanaat_cards` (`Id` int(11) NOT NULL AUTO_INCREMENT, `NumberOfCards` int(11) NOT NULL DEFAULT 1, `HolderName` varchar(100) NOT NULL, `FatherName` varchar(100), `Reference` varchar(100), `Mobile` varchar(20), `CardType` varchar(50) DEFAULT 'Standard', `TotalAmount` decimal(15,2) DEFAULT 0, `IssueDate` date, `Status` enum('Active','Completed','Cancelled') DEFAULT 'Active', `Notes` text, PRIMARY KEY (`Id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `hasanaat_payments` (`Id` int(11) NOT NULL AUTO_INCREMENT, `CardId` int(11) NOT NULL, `Amount` decimal(15,2) NOT NULL, `Date` date NOT NULL, `ReceivedBy` int(11), `Remarks` text, PRIMARY KEY (`Id`), FOREIGN KEY (`CardId`) REFERENCES `hasanaat_cards`(`Id`) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
         "CREATE TABLE IF NOT EXISTS `general_income` (`Id` int(11) NOT NULL AUTO_INCREMENT, `Title` varchar(255), `Category` varchar(100), `Amount` decimal(15,2), `Date` date, `Description` text, `ReceivedBy` int(11), PRIMARY KEY (`Id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
         "CREATE TABLE IF NOT EXISTS `general_expenses` (`Id` int(11) NOT NULL AUTO_INCREMENT, `Title` varchar(255), `Category` varchar(100), `Amount` decimal(15,2), `Date` date, `Description` text, `AddedBy` int(11), PRIMARY KEY (`Id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-
-        // --- F. EXTRAS ---
-        "CREATE TABLE IF NOT EXISTS `certificates` (`id` int(11) NOT NULL AUTO_INCREMENT, `student_id` int(11) NOT NULL, `type` varchar(50), `title` varchar(255), `description` text, `issued_date` date, `issued_by` varchar(100), PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-        "CREATE TABLE IF NOT EXISTS `prizes` (`id` int(11) NOT NULL AUTO_INCREMENT, `student_id` int(11) NOT NULL, `prize_name` varchar(255), `reason` varchar(255), `cost` decimal(10,2), `date` date, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-        "CREATE TABLE IF NOT EXISTS `teachers` (`id` int(11) NOT NULL AUTO_INCREMENT, `name` varchar(100), `gender` enum('Male','Female'), `phone` varchar(20), `user_id` int(11), PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-        "CREATE TABLE IF NOT EXISTS `activity_logs` (`id` int(11) NOT NULL AUTO_INCREMENT, `user_id` int(11), `action` varchar(50), `details` text, `ip_address` varchar(45), `created_at` timestamp DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-"CREATE TABLE IF NOT EXISTS `monthly_fees` (
-    `Id` int(11) NOT NULL AUTO_INCREMENT,
-    `EnrollmentId` int(11) NOT NULL,
-    `Amount` decimal(10,2) NOT NULL,
-    `Month` int(2) NOT NULL,
-    `Year` int(4) NOT NULL,
-    `Status` enum('Paid', 'Unpaid') DEFAULT 'Unpaid',
-    `PaidDate` date DEFAULT NULL,
-    `CollectedBy` int(11) DEFAULT NULL,
-    PRIMARY KEY (`Id`),
-    UNIQUE KEY `unique_monthly` (`EnrollmentId`, `Month`, `Year`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-        "CREATE TABLE IF NOT EXISTS `events` (`id` int(11) NOT NULL AUTO_INCREMENT, `title` varchar(255), `start_date` date, `end_date` date, `description` text, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
+        "CREATE TABLE IF NOT EXISTS `tabarruk` (`id` int(11) NOT NULL AUTO_INCREMENT, `date` date NOT NULL, `item_name` varchar(255) NOT NULL, `quantity` int(11) DEFAULT 0, `total_cost` decimal(10,2) NOT NULL, `description` text, `created_at` timestamp DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `budget_plan` (`Id` int(11) NOT NULL AUTO_INCREMENT, `MonthYear` varchar(20) NOT NULL, `Category` varchar(100) NOT NULL, `TargetAmount` decimal(15,2) NOT NULL, `Type` enum('Income','Expense') NOT NULL, PRIMARY KEY (`Id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `monthly_fees` (`Id` int(11) NOT NULL AUTO_INCREMENT, `EnrollmentId` int(11) NOT NULL, `Amount` decimal(10,2) NOT NULL, `Month` int(2) NOT NULL, `Year` int(4) NOT NULL, `Status` enum('Paid', 'Unpaid') DEFAULT 'Unpaid', `PaidDate` date DEFAULT NULL, `CollectedBy` int(11) DEFAULT NULL, PRIMARY KEY (`Id`), UNIQUE KEY `unique_monthly` (`EnrollmentId`, `Month`, `Year`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `teachers` (`id` int(11) NOT NULL AUTO_INCREMENT, `name` varchar(100), `gender` enum('Male','Female'), `phone` varchar(20), `notes` text, `user_id` int(11), `base_salary` decimal(10,2) DEFAULT 0, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `teacher_sessions` (`teacher_id` int(11) NOT NULL, `session_id` int(11) NOT NULL, PRIMARY KEY (`teacher_id`, `session_id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `staff_monthly_salaries` (`id` int(11) NOT NULL AUTO_INCREMENT, `teacher_id` int(11) NOT NULL, `month` int(2) NOT NULL, `year` int(4) NOT NULL, `t_salary` decimal(10,2) DEFAULT 0, `t_w_days` int(11) DEFAULT 0, `d_w_hours` decimal(5,2) DEFAULT 0, `t_w_hours` decimal(10,2) DEFAULT 0, `salary_per_hour` decimal(10,2) DEFAULT 0, `h_worked` decimal(10,2) DEFAULT 0, `salary_payable` decimal(10,2) DEFAULT 0, `aabtaab_salary` decimal(10,2) DEFAULT 0, `dq_salary` decimal(10,2) DEFAULT 0, `ulma_class_count` int(11) DEFAULT 0, `ulma_classes` decimal(10,2) DEFAULT 0, `g_total` decimal(10,2) DEFAULT 0, `status` enum('Unpaid', 'Paid') DEFAULT 'Unpaid', `paid_date` date DEFAULT NULL, `processed_by` int(11) DEFAULT NULL, PRIMARY KEY (`id`), UNIQUE KEY `unique_staff_salary` (`teacher_id`, `month`, `year`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `staff_timesheets` (`id` int(11) NOT NULL AUTO_INCREMENT, `teacher_id` int(11) NOT NULL, `date` date NOT NULL, `time_in` time DEFAULT NULL, `time_out` time DEFAULT NULL, `duty_type` varchar(50) DEFAULT 'Working Hour', `status` varchar(50) DEFAULT 'On Time', `worked_hours` decimal(5,2) DEFAULT 0, PRIMARY KEY (`id`), UNIQUE KEY `unique_staff_date` (`teacher_id`, `date`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `certificates` (`id` int(11) NOT NULL AUTO_INCREMENT, `student_id` int(11) NOT NULL, `type` varchar(50), `title` varchar(255), `description` text, `issued_date` date, `issued_by` varchar(100), `bg_image` varchar(255) DEFAULT NULL, `text_color` varchar(50) DEFAULT '#1a3c34', `font_family` varchar(100) DEFAULT 'Cinzel', `color_title` varchar(50) DEFAULT '#6b4c3a', `color_name` varchar(50) DEFAULT '#000000', `color_badge` varchar(50) DEFAULT '#FFFFFF', `bg_badge` varchar(50) DEFAULT '#5A3A22', `cert_logo` varchar(255) DEFAULT NULL, `custom_season` varchar(100) DEFAULT NULL, `custom_session` varchar(100) DEFAULT NULL, `custom_class` varchar(100) DEFAULT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `prizes` (`id` int(11) NOT NULL AUTO_INCREMENT, `student_id` int(11) NOT NULL, `session_id` int(11), `class_id` varchar(50), `prize_name` varchar(255), `reason` varchar(255), `cost` decimal(10,2), `date` date, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+        "CREATE TABLE IF NOT EXISTS `events` (`id` int(11) NOT NULL AUTO_INCREMENT, `session_id` int(11), `title` varchar(255), `start_date` date, `end_date` date, `description` text, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
     ];
 
-    // Execute Creations
     foreach ($sqls as $sql) {
         try { $pdo->exec($sql); } catch (Exception $e) {}
     }
 
-// 2. COLUMNS ADD KARNA
-    try { $pdo->exec("ALTER TABLE `classmanifest` ADD COLUMN `session_id` INT(11) DEFAULT NULL"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `enrollmentsession` ADD COLUMN `Timings` VARCHAR(100) DEFAULT NULL"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `enrollmentsession` ADD COLUMN `SortOrder` INT DEFAULT 0"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `enrollment` ADD COLUMN `enrollment_fee` DECIMAL(10,2) DEFAULT 0"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `classmanifest` ADD COLUMN `WhatsappLink` TEXT DEFAULT NULL"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `classmanifest` ADD COLUMN `assigned_user_id` INT(11) DEFAULT NULL"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `students` ADD COLUMN `Address` TEXT DEFAULT NULL"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `teachers` ADD COLUMN `user_id` INT(11) DEFAULT NULL"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `certificates` ADD COLUMN `bg_image` VARCHAR(255) DEFAULT NULL"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `certificates` ADD COLUMN `text_color` VARCHAR(50) DEFAULT '#1a3c34'"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `certificates` ADD COLUMN `font_family` VARCHAR(100) DEFAULT 'Cinzel'"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `exam_results` ADD COLUMN `calculated_payout` INT DEFAULT 0"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `exams` MODIFY `class_id` VARCHAR(50)"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `exams` MODIFY `session_id` VARCHAR(50)"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `exams` ADD COLUMN `date` DATE"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `exams` ADD COLUMN `att_start_date` DATE"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `exams` ADD COLUMN `att_end_date` DATE"); } catch (Exception $e) {}
-    try {
-        $pdo->exec("CREATE TABLE IF NOT EXISTS `round_table_records` (
-            `id` INT AUTO_INCREMENT PRIMARY KEY,
-            `session_id` VARCHAR(50),
-            `class_id` VARCHAR(50),
-            `date` DATE,
-            `enrollment_id` INT,
-            `position` INT,
-            `reward_amount` INT
-        )");
-    } catch (Exception $e) {}
-    // NEW: Detailed Color Controls
-    try { $pdo->exec("ALTER TABLE `certificates` ADD COLUMN `color_title` VARCHAR(50) DEFAULT '#6b4c3a'"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `certificates` ADD COLUMN `color_name` VARCHAR(50) DEFAULT '#000000'"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `certificates` ADD COLUMN `color_badge` VARCHAR(50) DEFAULT '#FFFFFF'"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `certificates` ADD COLUMN `bg_badge` VARCHAR(50) DEFAULT '#5A3A22'"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `certificates` ADD COLUMN `cert_logo` VARCHAR(255) DEFAULT NULL"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `certificates` ADD COLUMN `custom_season` VARCHAR(100) DEFAULT NULL"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `certificates` ADD COLUMN `custom_session` VARCHAR(100) DEFAULT NULL"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE `certificates` ADD COLUMN `custom_class` VARCHAR(100) DEFAULT NULL"); } catch (Exception $e) {}
-
-try { 
-    $pdo->exec("ALTER TABLE `enrollment` ADD COLUMN `individual_monthly_fee` DECIMAL(10,2) DEFAULT 0");
-    $pdo->exec("ALTER TABLE `enrollment` ADD COLUMN `concession_remarks` TEXT"); 
-    $pdo->exec("ALTER TABLE `enrollment` ADD COLUMN `collected_by` INT(11) DEFAULT NULL"); 
-} catch (Exception $e) {}
-
-    // 3. FACTORY DEFAULTS
     $defaults = [
-        'app_name' => 'Management System',
-        'inst_name' => 'Institute Name',
-        'inst_address' => 'Address Line 1, City',
-'inst_phone' => '0000-0000000',
-        'inst_logo'  => 'logo.png',         // Naya (Dynamic Logo)
-        'cert_title' => 'CERTIFICATE OF APPRECIATION',
-        'cert_sign'  => 'Authorized Signature',         
-        'class_capacity' => '25',
-        'start_date' => date('d M Y'), 
-        'currency_symbol' => 'PKR',
-        'timezone' => 'Asia/Karachi',
-'cutoff_day' => '31',             
-        'cutoff_month' => '05',           
-        'kids_max_age' => '9',            
-        'kids_min_age' => '5',
-        // EXAM & PRIZE BUDGET FORMULA SETTINGS
-        'prize_rate_present' => '37',
-        'prize_rate_late'    => '25',
-        'prize_rate_pct'     => '50',
-        'prize_round_to'     => '10',
-        'currency_denominations' => '1000,500,100,75,50,20,10',
-        'game_reward_1st' => '70',
-        'game_reward_2nd' => '50',
-        'game_reward_3rd' => '30',
-
-        // Dynamic Dropdowns
+        'app_name' => 'Management System', 'inst_name' => 'Institute Name', 'inst_address' => 'Address Line 1, City',
+        'inst_phone' => '0000-0000000', 'inst_logo'  => 'logo.png', 'cert_title' => 'CERTIFICATE OF APPRECIATION',
+        'cert_sign'  => 'Authorized Signature', 'class_capacity' => '25', 'start_date' => date('d M Y'), 
+        'currency_symbol' => 'PKR', 'timezone' => 'Asia/Karachi', 'ulma_class_rate' => '500',
+        'default_monthly_fee' => '0', 'cutoff_day' => '31', 'cutoff_month' => '05', 
+        'kids_max_age' => '9', 'kids_min_age' => '5', 'prize_rate_present' => '37',
+        'prize_rate_late'    => '25', 'prize_rate_pct'     => '50', 'prize_round_to'     => '10',
+        'currency_denominations' => '1000,500,100,75,50,20,10', 'game_reward_1st' => '70',
+        'game_reward_2nd' => '50', 'game_reward_3rd' => '30',
         'opt_expense_cats' => 'Utility Bills,Rent,Salary,Maintenance,Stationery,Other',
         'opt_income_cats'  => 'Fees,Donation,Zakat,Sadqa,Other',
         'opt_prize_reasons'=> 'Position Holder,Full Attendance,Good Akhlaq,Hifz Progress',
@@ -345,8 +158,6 @@ try {
         }
     }
 
-    // 4. AUTO-FIX MISSING IDs (Critical)
-    // Ye code ab function ke andar hai (Jo pehle bahar reh gaya tha)
     $ghosts = $pdo->query("SELECT COUNT(*) FROM students WHERE Id = 0")->fetchColumn();
     if ($ghosts > 0) {
         $maxId = $pdo->query("SELECT MAX(Id) FROM students")->fetchColumn();
@@ -654,148 +465,226 @@ if (isset($_GET['action']) && ($_GET['action'] === 'fetch_students' || $_GET['ac
 
     $limitClause = ($length != -1) ? "LIMIT $start, $length" : "";
     
-    // FETCH DATA
-    $sql = "SELECT s.*, c.ClassName, c.EnrollmentType, c.WhatsappLink, es.Name as SessionName, es.Timings, e.enrollment_fee, e.Id as EnrollmentId, e.EnrollmentSessionId, e.Class as EnrolledClass 
-            $sqlBase $where GROUP BY s.Id ORDER BY $orderBy $orderDir $limitClause";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
+// FETCH DATA
+// FIX: Group by Student ID only to show 1 row per student. Sorting issues fixed with MAX()
+$orderByReplaced = str_replace(
+    ['es.Name', 'c.ClassName', 'e.enrollment_fee'], 
+    ['MAX(es.Name)', 'MAX(c.ClassName)', 'MAX(e.enrollment_fee)'], 
+    $orderBy
+);
 
-// Pre-fetch Classes properly (Sirf Active Sessions wali classes + Duplicate Fix)
-    $allClasses = $pdo->query("SELECT * FROM classmanifest WHERE session_id IN (SELECT Id FROM enrollmentsession WHERE IsActive=1) ORDER BY EnrollmentType, ClassName")->fetchAll();
-    $distinctClasses = [];
-    $seenCls = [];
-    foreach ($allClasses as $ac) {
-        $uniqueKey = $ac['EnrollmentType'] . '_' . trim($ac['ClassName']);
-        
-        if (in_array($uniqueKey, $seenCls)) continue; 
-        
-        $seenCls[] = $uniqueKey;
-        $distinctClasses[] = [
-            'Class' => $ac['Class'], 
-            'ClassName' => $ac['ClassName'], 
-            'EnrollmentType' => $ac['EnrollmentType']
-        ];
+$sql = "SELECT s.* $sqlBase $where GROUP BY s.Id ORDER BY $orderByReplaced $orderDir $limitClause";
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+
+$allClasses = $pdo->query("SELECT * FROM classmanifest WHERE session_id IN (SELECT Id FROM enrollmentsession WHERE IsActive=1) ORDER BY EnrollmentType, ClassName")->fetchAll();
+$distinctClasses = [];
+$seenCls = [];
+foreach ($allClasses as $ac) {
+    $uniqueKey = $ac['EnrollmentType'] . '_' . trim($ac['ClassName']);
+    if (in_array($uniqueKey, $seenCls)) continue; 
+    $seenCls[] = $uniqueKey;
+    $distinctClasses[] = [
+        'Class' => $ac['Class'], 
+        'ClassName' => $ac['ClassName'], 
+        'EnrollmentType' => $ac['EnrollmentType']
+    ];
+}
+
+$allSessions = $pdo->query("SELECT Id, Name FROM enrollmentsession WHERE IsActive=1 ORDER BY SortOrder, Id")->fetchAll();
+
+// Query to fetch ACTIVE enrollments in ACTIVE sessions for a specific student
+// FIX: Added GROUP BY e.EnrollmentSessionId, e.Class to hide database duplicate entries visually
+$enrQuery = $pdo->prepare("
+    SELECT MAX(e.Id) as EnrollmentId, e.Class as EnrolledClass, MAX(e.enrollment_fee) as enrollment_fee, e.EnrollmentSessionId,
+           c.ClassName, c.EnrollmentType, c.WhatsappLink,
+           es.Name as SessionName, es.Timings
+    FROM enrollment e
+    JOIN enrollmentsession es ON e.EnrollmentSessionId = es.Id AND es.IsActive = 1
+    LEFT JOIN classmanifest c ON e.Class = c.Class
+    WHERE e.StudentId = ? AND e.IsActive = 1
+    GROUP BY e.EnrollmentSessionId, e.Class
+    ORDER BY es.SortOrder, MAX(e.Id)
+");
+
+$data = [];
+while ($r = $stmt->fetch()) {
+    $id = $r['Id'];
+    
+    // Fetch this student's active enrollments
+    $enrQuery->execute([$id]);
+    $enrollments = $enrQuery->fetchAll();
+
+    $age = calculateAge($r['DOB']);
+
+    $missingFields = [];
+    if (empty($r['MobileNumberFather']) && empty($r['MobileNumberMother'])) $missingFields[] = "Mobile";
+    if (empty($r['DOB'])) $missingFields[] = "DOB";
+    if (empty($r['Address'])) $missingFields[] = "Address";
+    if (empty($r['Gender'])) $missingFields[] = "Gender";
+
+    $missingStatus = empty($missingFields) ? '<span class="badge bg-success" style="font-size:0.7em">Complete</span>' : '<span class="text-danger" style="font-size:0.75em; font-weight:bold;">Missing: ' . implode(', ', $missingFields) . '</span>';
+
+    $waHtml = '-';
+    $waNumF = preg_replace('/[^0-9]/', '', $r['MobileNumberFather'] ?: $r['MobileNumberMother']);
+    $waNumM = preg_replace('/[^0-9]/', '', $r['MobileNumberMother']);
+    
+    $rawMsg = "{$r['Name']}, this is a message from Madrasa.";
+    if (!empty($enrollments)) {
+        $firstEnr = $enrollments[0];
+        $sessName = $firstEnr['SessionName'];
+        $timings = $firstEnr['Timings'] ?: 'Check Schedule';
+        $startDate = getSet('start_date') ?: 'Upcoming Date';
+        $rawMsg = "{$r['Name']} your class is {$firstEnr['ClassName']} in {$sessName} and your class timings are {$timings} . Your class will start on {$startDate}.";
+        if (!empty($firstEnr['WhatsappLink'])) $rawMsg .= " Please join the WhatsApp group: {$firstEnr['WhatsappLink']}";
     }
 
-    $allSessions = $pdo->query("SELECT Id, Name FROM enrollmentsession WHERE IsActive=1 ORDER BY SortOrder, Id")->fetchAll();
+    $waMsg = rawurlencode($rawMsg);
+    if ($waNumF) $waHtml = "<a href='https://api.whatsapp.com/send?phone=$waNumF&text=$waMsg' target='_blank' class='btn btn-success btn-sm py-0 mb-1'><i class='fab fa-whatsapp'></i> Chat</a>";
+    if ($waNumM && $waNumM !== $waNumF) $waHtml .= "<br><a href='https://api.whatsapp.com/send?phone=$waNumM&text=$waMsg' target='_blank' class='btn btn-outline-success btn-sm py-0'><i class='fab fa-whatsapp'></i> Mom</a>";
 
-    $data = [];
-    while ($r = $stmt->fetch()) {
-        $id = $r['Id'];
-        $age = calculateAge($r['DOB']);
-        $currentSessionId = $r['EnrollmentSessionId'] ?? '';
-        $currentClassId = $r['EnrolledClass'] ?? '';
+    $sessHtml = "";
+    $classHtml = "";
+    $feeHtml = "";
+    $actions = "";
 
-        $missingFields = [];
-        if (empty($r['MobileNumberFather']) && empty($r['MobileNumberMother'])) $missingFields[] = "Mobile";
-        if (empty($r['DOB'])) $missingFields[] = "DOB";
-        if (empty($r['Address'])) $missingFields[] = "Address";
-        if (empty($r['Gender'])) $missingFields[] = "Gender";
-
-        $missingStatus = empty($missingFields) ? '<span class="badge bg-success" style="font-size:0.7em">Complete</span>' : '<span class="text-danger" style="font-size:0.75em; font-weight:bold;">Missing: ' . implode(', ', $missingFields) . '</span>';
-
-        $waHtml = '-';
-        $waNumF = preg_replace('/[^0-9]/', '', $r['MobileNumberFather'] ?: $r['MobileNumberMother']);
-        $waNumM = preg_replace('/[^0-9]/', '', $r['MobileNumberMother']);
-        $sessName = $r['SessionName'] ?: 'Assigned Session';
-        $timings = $r['Timings'] ?: 'Check Schedule';
-        $startDate = getSet('start_date') ?: 'Upcoming Date';
-        $groupLink = $r['WhatsappLink'];
-        $rawMsg = "{$r['Name']} your class is {$r['ClassName']} in {$sessName} and your class timings are {$timings} . Your class will start on {$startDate}.";
-        if (!empty($groupLink)) $rawMsg .= " Please join the WhatsApp group: $groupLink";
-
-        $waMsg = rawurlencode($rawMsg);
-        if ($waNumF) $waHtml = "<a href='https://api.whatsapp.com/send?phone=$waNumF&text=$waMsg' target='_blank' class='btn btn-success btn-sm py-0 mb-1'><i class='fab fa-whatsapp'></i> Chat</a>";
-        if ($waNumM && $waNumM !== $waNumF) $waHtml .= "<br><a href='https://api.whatsapp.com/send?phone=$waNumM&text=$waMsg' target='_blank' class='btn btn-outline-success btn-sm py-0'><i class='fab fa-whatsapp'></i> Mom</a>";
-
-        // --- 1. SESSION COLUMN ---
-        $sessHtml = $r['SessionName'] ? "<span class='badge bg-info'>{$r['SessionName']}</span>" : "";
+    if (empty($enrollments)) {
+        // Not enrolled in any active session
+        $rowUid = $id . '_0';
+        
         if (can('enroll_student')) {
-            $displaySess = $r['SessionName'] ? 'none' : 'block';
-            if ($r['SessionName']) $sessHtml .= " <button type='button' class='btn btn-xs btn-outline-dark mt-1' onclick=\"document.getElementById('sess_edit_$id').style.display='block';this.style.display='none'\">Change</button>";
             $localSessionOpts = "";
             foreach ($allSessions as $sess) {
-                $sel = ($sess['Id'] == $currentSessionId) ? 'selected' : '';
-                $localSessionOpts .= "<option value='{$sess['Id']}' $sel>{$sess['Name']}</option>";
+                $localSessionOpts .= "<option value='{$sess['Id']}'>{$sess['Name']}</option>";
             }
-            $sessHtml .= "<div id='sess_edit_$id' style='display:$displaySess'>
-                <select class='form-select form-select-sm mt-1' id='sel_sess_$id'><option value=''>Session...</option>$localSessionOpts</select>
+            $sessHtml .= "<div id='sess_edit_$rowUid'>
+                <select class='form-select form-select-sm mt-1' id='sel_sess_$rowUid'><option value=''>Session...</option>$localSessionOpts</select>
             </div>";
-        } else {
-            $sessHtml = $r['SessionName'] ?: '-';
-        }
-
-        // --- 2. CLASS COLUMN ---
-        $classHtml = $r['ClassName'] ? "<span class='badge bg-success'>{$r['ClassName']}</span>" : "";
-        if (can('enroll_student')) {
-            $displayClass = $r['ClassName'] ? 'none' : 'block';
-            if ($r['ClassName']) $classHtml .= " <button type='button' class='btn btn-xs btn-outline-dark mt-1' onclick=\"document.getElementById('cls_edit_$id').style.display='block';this.style.display='none'\">Change</button>";
+            
             $localClassOpts = "";
             foreach ($distinctClasses as $dc) {
                 $lbl = ($dc['EnrollmentType'] == 'BoysClass') ? '[B]' : '[G]';
-                $sel = ($dc['Class'] == $currentClassId) ? 'selected' : '';
-                $localClassOpts .= "<option value='{$dc['Class']}' $sel>$lbl {$dc['ClassName']}</option>";
+                $localClassOpts .= "<option value='{$dc['Class']}'>$lbl {$dc['ClassName']}</option>";
             }
-            $classHtml .= "<div id='cls_edit_$id' style='display:$displayClass'>
-                <select class='form-select form-select-sm mt-1' id='sel_cls_$id'><option value=''>Class...</option>$localClassOpts</select>
+            $classHtml .= "<div id='cls_edit_$rowUid'>
+                <select class='form-select form-select-sm mt-1' id='sel_cls_$rowUid'><option value=''>Class...</option>$localClassOpts</select>
             </div>";
-        } else {
-            $classHtml = $r['ClassName'] ?: '-';
-        }
-
-        // --- 3. FEE & SAVE BUTTON COLUMN ---
-        $feeVal = number_format($r['enrollment_fee'] ?? 0);
-        $feeHtml = $r['ClassName'] ? "<div id='fee_view_$id'><span class='badge bg-light text-dark border'>$feeVal</span>" : "";
-        if (can('enroll_student')) {
-            $displayFeeEdit = $r['ClassName'] ? 'none' : 'block';
-            if ($r['ClassName']) {
-                $feeHtml .= " <button type='button' class='btn btn-xs btn-outline-dark ms-1' onclick=\"document.getElementById('fee_edit_$id').style.display='block';document.getElementById('fee_view_$id').style.display='none';\">Edit</button></div>";
-            }
             
-            // The Unified "Save" Form
-            $feeHtml .= "<div id='fee_edit_$id' style='display:$displayFeeEdit'>
+            $feeHtml .= "<div id='fee_edit_$rowUid'>
                 <form method='POST' class='d-flex align-items-center mt-1' onsubmit=\"
-                    var s = document.getElementById('sel_sess_$id');
-                    var c = document.getElementById('sel_cls_$id');
-                    if(s && s.value) document.getElementById('hidden_sess_$id').value = s.value;
-                    if(c && c.value) document.getElementById('hidden_cls_$id').value = c.value;
-                    if(!document.getElementById('hidden_sess_$id').value){alert('Please select Session first!'); return false;}
-                    if(!document.getElementById('hidden_cls_$id').value){alert('Please select Class first!'); return false;}
+                    var s = document.getElementById('sel_sess_$rowUid');
+                    var c = document.getElementById('sel_cls_$rowUid');
+                    if(s && s.value) document.getElementById('hidden_sess_$rowUid').value = s.value;
+                    if(c && c.value) document.getElementById('hidden_cls_$rowUid').value = c.value;
+                    if(!document.getElementById('hidden_sess_$rowUid').value){alert('Please select Session first!'); return false;}
+                    if(!document.getElementById('hidden_cls_$rowUid').value){alert('Please select Class first!'); return false;}
                 \">
                     <input type='hidden' name='action' value='manual_assign'>
                     <input type='hidden' name='student_id' value='$id'>
-                    <input type='hidden' name='session_id' id='hidden_sess_$id' value='$currentSessionId'>
-                    <input type='hidden' name='class_id' id='hidden_cls_$id' value='$currentClassId'>
-                    <input type='number' name='fee' class='form-control form-control-sm p-1 me-1' value='{$r['enrollment_fee']}' placeholder='Fee' style='width:65px'>
-                    <button type='submit' class='btn btn-sm btn-primary py-0'>Save</button>
-                    " . ($r['ClassName'] ? "<button type='button' class='btn btn-xs btn-danger ms-1' onclick=\"document.getElementById('fee_edit_$id').style.display='none';document.getElementById('fee_view_$id').style.display='block';\">x</button>" : "") . "
+                    <input type='hidden' name='session_id' id='hidden_sess_$rowUid' value=''>
+                    <input type='hidden' name='class_id' id='hidden_cls_$rowUid' value=''>
+                    <input type='number' name='fee' class='form-control form-control-sm p-1 me-1' value='0' placeholder='Fee' style='width:65px'>
+                    <button type='submit' class='btn btn-sm btn-primary py-0'>Enroll</button>
                 </form>
             </div>";
-        } else if (!$r['ClassName']) {
-            $feeHtml = "-";
+        } else {
+            $sessHtml = "-"; $classHtml = "-"; $feeHtml = "-";
         }
+        
+    } else {
+        // Stacked Enrollments inside the same row
+        $first = true;
+        foreach ($enrollments as $enr) {
+            $enrId = $enr['EnrollmentId'];
+            $rowUid = $id . '_' . $enrId;
+            
+            $borderClass = !$first ? "border-top border-secondary pt-2 mt-2" : "";
+            $first = false;
 
-        // --- 4. ACTIONS COLUMN (Result Button Removed) ---
-        $actions = "";
-        if (!empty($r['EnrollmentId'])) {
-            $actions .= "<a class='btn btn-sm btn-warning py-0 me-1 mb-1 text-dark' href='?page=enrollment_slip&enrollment_id={$r['EnrollmentId']}' target='_blank'><i class='fas fa-print'></i> Slip</a>";
-        }
-        if (can('student_edit')) {
-            $rJson = htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8');
-            $actions .= "<button class='btn btn-sm btn-info py-0 me-1 mb-1' onclick='editStudent($rJson)'>Edit</button>";
-        }
-        if (can('delete_enrollment') && !empty($r['EnrollmentId'])) {
-            $actions .= "<form method='POST' class='d-inline' onsubmit=\"return confirm('Unenroll?');\">".
-                        "<input type='hidden' name='action' value='delete_enrollment'>".
-                        "<input type='hidden' name='enrollment_id' value='{$r['EnrollmentId']}'>".
-                        "<button type='submit' class='btn btn-sm btn-danger py-0 mb-1'>Unenroll</button></form>";
-        } elseif (can('student_delete') && empty($r['EnrollmentId'])) {
-            $actions .= "<form method='POST' class='d-inline' onsubmit=\"return confirm('Delete?');\"><input type='hidden' name='action' value='delete_student'><input type='hidden' name='student_id' value='$id'><button class='btn btn-sm btn-outline-danger py-0 mb-1'>x</button></form>";
-        }
+            // --- SESSION ---
+            $sHtml = "<span class='badge bg-info text-dark'>{$enr['SessionName']}</span>";
+            if (can('enroll_student')) {
+                $sHtml .= " <button type='button' class='btn btn-xs btn-outline-dark mt-1' onclick=\"document.getElementById('sess_edit_$rowUid').style.display='block';this.style.display='none'\">Change</button>";
+                $localSessionOpts = "";
+                foreach ($allSessions as $sess) {
+                    $sel = ($sess['Id'] == $enr['EnrollmentSessionId']) ? 'selected' : '';
+                    $localSessionOpts .= "<option value='{$sess['Id']}' $sel>{$sess['Name']}</option>";
+                }
+                $sHtml .= "<div id='sess_edit_$rowUid' style='display:none'>
+                    <select class='form-select form-select-sm mt-1' id='sel_sess_$rowUid'><option value=''>Session...</option>$localSessionOpts</select>
+                </div>";
+            }
+            $sessHtml .= "<div class='$borderClass pb-1'>$sHtml</div>";
 
-        // Output Array matching New Tarteeb (Session -> Class -> Fee)
-        $data[] = [$id, $r['Name'], $r['Paternity'], $missingStatus, $r['MobileNumberFather'], $waHtml, $age, $sessHtml, $classHtml, $feeHtml, $actions];
+            // --- CLASS ---
+            $cHtml = "<span class='badge bg-success'>{$enr['ClassName']}</span>";
+            if (can('enroll_student')) {
+                $cHtml .= " <button type='button' class='btn btn-xs btn-outline-dark mt-1' onclick=\"document.getElementById('cls_edit_$rowUid').style.display='block';this.style.display='none'\">Change</button>";
+                $localClassOpts = "";
+                foreach ($distinctClasses as $dc) {
+                    $lbl = ($dc['EnrollmentType'] == 'BoysClass') ? '[B]' : '[G]';
+                    $sel = ($dc['Class'] == $enr['EnrolledClass']) ? 'selected' : '';
+                    $localClassOpts .= "<option value='{$dc['Class']}' $sel>$lbl {$dc['ClassName']}</option>";
+                }
+                $cHtml .= "<div id='cls_edit_$rowUid' style='display:none'>
+                    <select class='form-select form-select-sm mt-1' id='sel_cls_$rowUid'><option value=''>Class...</option>$localClassOpts</select>
+                </div>";
+            }
+            $classHtml .= "<div class='$borderClass pb-1'>$cHtml</div>";
+
+            // --- FEE & SAVE ---
+            $feeVal = number_format($enr['enrollment_fee'] ?? 0);
+            $fHtml = "<div id='fee_view_$rowUid'><span class='badge bg-light text-dark border'>$feeVal</span>";
+            if (can('enroll_student')) {
+                $fHtml .= " <button type='button' class='btn btn-xs btn-outline-dark ms-1' onclick=\"document.getElementById('fee_edit_$rowUid').style.display='block';document.getElementById('fee_view_$rowUid').style.display='none';\">Edit</button></div>";
+                
+                $fHtml .= "<div id='fee_edit_$rowUid' style='display:none'>
+                    <form method='POST' class='d-flex align-items-center mt-1' onsubmit=\"
+                        var s = document.getElementById('sel_sess_$rowUid');
+                        var c = document.getElementById('sel_cls_$rowUid');
+                        if(s && s.value) document.getElementById('hidden_sess_$rowUid').value = s.value;
+                        if(c && c.value) document.getElementById('hidden_cls_$rowUid').value = c.value;
+                        if(!document.getElementById('hidden_sess_$rowUid').value){alert('Please select Session first!'); return false;}
+                        if(!document.getElementById('hidden_cls_$rowUid').value){alert('Please select Class first!'); return false;}
+                    \">
+                        <input type='hidden' name='action' value='manual_assign'>
+                        <input type='hidden' name='student_id' value='$id'>
+                        <input type='hidden' name='session_id' id='hidden_sess_$rowUid' value='{$enr['EnrollmentSessionId']}'>
+                        <input type='hidden' name='class_id' id='hidden_cls_$rowUid' value='{$enr['EnrolledClass']}'>
+                        <input type='number' name='fee' class='form-control form-control-sm p-1 me-1' value='{$enr['enrollment_fee']}' placeholder='Fee' style='width:65px'>
+                        <button type='submit' class='btn btn-sm btn-primary py-0'>Save</button>
+                        <button type='button' class='btn btn-xs btn-danger ms-1' onclick=\"document.getElementById('fee_edit_$rowUid').style.display='none';document.getElementById('fee_view_$rowUid').style.display='block';\">x</button>
+                    </form>
+                </div>";
+            } else {
+                $fHtml .= "</div>";
+            }
+            $feeHtml .= "<div class='$borderClass pb-1'>$fHtml</div>";
+
+            // --- ACTIONS ---
+            $aHtml = "<a class='btn btn-sm btn-warning py-0 me-1 mb-1 text-dark' href='?page=enrollment_slip&enrollment_id={$enrId}' target='_blank'><i class='fas fa-print'></i> Slip</a>";
+            if (can('delete_enrollment')) {
+                $aHtml .= "<form method='POST' class='d-inline' onsubmit=\"return confirm('Unenroll from {$enr['SessionName']}?');\">
+                    <input type='hidden' name='action' value='delete_enrollment'>
+                    <input type='hidden' name='enrollment_id' value='{$enrId}'>
+                    <button type='submit' class='btn btn-sm btn-danger py-0 mb-1'>Unenroll</button></form>";
+            }
+            $actions .= "<div class='$borderClass pb-1'>$aHtml</div>";
+        }
     }
+
+    // Global Student Profile Actions
+    $rJson = htmlspecialchars(json_encode($r, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8');
+    if (can('student_edit')) {
+        $mt = !empty($enrollments) ? "mt-2 pt-2 border-top border-secondary" : "";
+        $actions .= "<div class='$mt'><button class='btn btn-sm btn-info py-0 w-100 mb-1' onclick='editStudent($rJson)'>Edit Profile</button></div>";
+    }
+    if (can('student_delete') && empty($enrollments)) {
+        $actions .= "<form method='POST' class='d-inline' onsubmit=\"return confirm('Delete Student Profile completely?');\"><input type='hidden' name='action' value='delete_student'><input type='hidden' name='student_id' value='$id'><button class='btn btn-sm btn-outline-danger py-0 w-100'>Delete Profile</button></form>";
+    }
+
+    $data[] = [$id, $r['Name'], $r['Paternity'], $missingStatus, $r['MobileNumberFather'], $waHtml, $age, $sessHtml, $classHtml, $feeHtml, $actions];
+}
     
     ob_clean();
     header('Content-Type: application/json');
@@ -864,6 +753,84 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_certificates') {
     exit;
 }
 
+if (isset($_GET['action']) && $_GET['action'] === 'fetch_monthly_fees') {
+    $month = (int)($_GET['month'] ?? date('n'));
+    $year = (int)($_GET['year'] ?? date('Y'));
+    $classId = $_GET['class_id'] ?? '';
+    $sessId = $_GET['session_id'] ?? ''; // NAYA: Session ID filter
+
+    $sql = "SELECT e.Id as EnrollmentId, s.Name, s.Paternity, c.ClassName, e.individual_monthly_fee,
+                   mf.Id as FeeId, mf.Amount, mf.Status, mf.PaidDate, u.name as Collector
+            FROM enrollment e
+            JOIN students s ON e.StudentId = s.Id
+            LEFT JOIN classmanifest c ON e.Class = c.Class
+            LEFT JOIN monthly_fees mf ON e.Id = mf.EnrollmentId AND mf.Month = ? AND mf.Year = ?
+            LEFT JOIN users u ON mf.CollectedBy = u.id
+            WHERE e.IsActive = 1 AND e.EnrollmentSessionId = ?";
+    
+    $params = [$month, $year, $sessId];
+
+    if (!empty($classId)) {
+        $sql .= " AND e.Class = ?";
+        $params[] = $classId;
+    }
+
+    $sql .= " GROUP BY e.Id";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $data = [];
+
+    // HARCODED VALUE KHATAM: System setting se uthayega, warna 0 rakhega
+    $defaultFee = getSet('default_monthly_fee') !== '' ? getSet('default_monthly_fee') : 0;
+
+    while ($row = $stmt->fetch()) {
+        $expectedFee = $row['individual_monthly_fee'] > 0 ? $row['individual_monthly_fee'] : $defaultFee;
+        $actualFee = $row['Amount'] ?? $expectedFee;
+        
+        $isPaid = ($row['Status'] === 'Paid');
+        $statusBadge = $isPaid 
+            ? '<span class="badge bg-success-subtle text-success border border-success"><i class="fas fa-check-circle"></i> Paid</span>' 
+            : '<span class="badge bg-danger-subtle text-danger border border-danger"><i class="fas fa-times-circle"></i> Unpaid</span>';
+
+        $actions = '';
+        $rowJson = htmlspecialchars(json_encode(['enr_id' => $row['EnrollmentId'], 'fee_id' => $row['FeeId'], 'amount' => $actualFee, 'name' => $row['Name']]));
+        
+        if ($isPaid) {
+            $actions .= "<form method='POST' class='d-inline' onsubmit=\"return confirm('Are you sure you want to Revert this to Unpaid?');\">
+                            <input type='hidden' name='action' value='revert_monthly_fee'>
+                            <input type='hidden' name='fee_id' value='{$row['FeeId']}'>
+                            <button class='btn btn-sm btn-outline-warning py-0 me-1' title='Revert to Unpaid'><i class='fas fa-undo'></i></button>
+                         </form>";
+        } else {
+            $actions .= "<button class='btn btn-sm btn-success py-0 shadow-sm fw-bold me-1' onclick='openPayMonthlyModal({$rowJson})'><i class='fas fa-hand-holding-usd'></i> Pay</button>";
+            
+            // NAYA: Edit aur Delete ke buttons (sirf un records ke liye jo generate ho chuke hain)
+            if (!empty($row['FeeId'])) {
+                $actions .= "<button class='btn btn-sm btn-info py-0 shadow-sm fw-bold me-1' onclick='openEditMonthlyModal({$rowJson})' title='Edit Amount'><i class='fas fa-edit'></i></button>";
+                $actions .= "<form method='POST' class='d-inline' onsubmit=\"return confirm('Delete this fee record permanently?');\">
+                                <input type='hidden' name='action' value='delete_monthly_fee'>
+                                <input type='hidden' name='fee_id' value='{$row['FeeId']}'>
+                                <button class='btn btn-sm btn-danger py-0' title='Delete Record'><i class='fas fa-trash'></i></button>
+                             </form>";
+            }
+        }
+
+        $data[] = [
+            "<span class='fw-bold text-secondary'>#{$row['EnrollmentId']}</span>",
+            "<strong>{$row['Name']}</strong><br><small class='text-muted'>s/o {$row['Paternity']}</small>",
+            $row['ClassName'] ?? '-',
+            "<span class='fw-bold fs-6'>Rs. " . number_format($actualFee) . "</span>",
+            $statusBadge . ($row['PaidDate'] ? "<br><small class='text-muted' style='font-size:10px;'>" . date('d M Y', strtotime($row['PaidDate'])) . "</small>" : ""),
+            $row['Collector'] ?? '-',
+            $actions
+        ];
+    }
+    
+    header('Content-Type: application/json');
+    echo json_encode(['data' => $data]);
+    exit;
+}
 if (isset($_GET['action']) && $_GET['action'] === 'fetch_fee_report') {
     if (!can('view_fee_report')) { echo json_encode(['data' => []]); exit; }
     $draw = intval($_GET['draw'] ?? 1);
@@ -1207,7 +1174,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_hasanaat_cards') {
     $orderColIndex = intval($_GET['order'][0]['column'] ?? 0);
     $orderDir = ($_GET['order'][0]['dir'] ?? 'asc') === 'asc' ? 'ASC' : 'DESC';
 
-    $columns = [0=>'h.CardNumber', 1=>'h.HolderName', 2=>'h.CardType', 3=>'h.TotalAmount', 4=>'Paid', 5=>'Remaining'];
+    $columns = [0=>'h.NumberOfCards', 1=>'h.HolderName', 2=>'h.CardType', 3=>'h.TotalAmount', 4=>'Paid', 5=>'Remaining'];
     $orderBy = $columns[$orderColIndex] ?? 'h.Id';
 
     $sqlBase = " FROM hasanaat_cards h LEFT JOIN hasanaat_payments p ON p.CardId = h.Id ";
@@ -1216,7 +1183,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_hasanaat_cards') {
     $where = $whereBase;
     $params = $baseParams;
     if (!empty($searchValue)) {
-        $where .= " AND (h.CardNumber LIKE ? OR h.HolderName LIKE ? OR h.CardType LIKE ? OR h.Mobile LIKE ? OR h.Reference LIKE ?)";
+        $where .= " AND (h.NumberOfCards LIKE ? OR h.HolderName LIKE ? OR h.CardType LIKE ? OR h.Mobile LIKE ? OR h.Reference LIKE ?)";
         $term = "%$searchValue%";
         for ($i = 0; $i < 5; $i++) $params[] = $term;
     }
@@ -1240,7 +1207,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_hasanaat_cards') {
         $statusColor = ($bal <= 0) ? 'success' : 'primary';
         $actions = '';
         if (can('hasanaat_pay')) {
-            $actions .= "<button class='btn btn-xs btn-outline-danger me-1' onclick='openPay({$row['Id']}, \"{$row['CardNumber']}\")'>Redeem Cash</button>";
+            $actions .= "<button class='btn btn-xs btn-outline-danger me-1' onclick='openPay({$row['Id']}, \"{$row['NumberOfCards']}\")'>Redeem Cash</button>";
         }
         if (can('hasanaat_edit')) {
             $rowJson = htmlspecialchars(json_encode($row, JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8');
@@ -1253,7 +1220,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_hasanaat_cards') {
                         "<button class='btn btn-xs btn-danger'>X</button></form>";
         }
         $data[] = [
-            htmlspecialchars($row['CardNumber']),
+            htmlspecialchars($row['NumberOfCards']),
             '<strong>' . htmlspecialchars($row['HolderName']) . '</strong><br><small class="text-muted">' . htmlspecialchars($row['Mobile']) . '</small>',
             htmlspecialchars($row['CardType']),
             number_format($row['TotalAmount']),
@@ -1395,8 +1362,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_ghosts') {
     $length = intval($_GET['length'] ?? 50);
     $searchValue = $_GET['search']['value'] ?? '';
 
-// Ye query un sab ko dikhayegi jo CURRENT ACTIVE session mein assigned nahi hain
-$sqlBase = " FROM students s WHERE s.Id NOT IN (SELECT DISTINCT StudentId FROM enrollment WHERE IsActive = 1 AND EnrollmentSessionId IN (SELECT Id FROM enrollmentsession WHERE IsActive=1)) ";
+// Ye query sirf un bachon ko dikhayegi jo KABHI BHI kisi session mein enroll nahi hue (True Ghosts)
+$sqlBase = " FROM students s WHERE s.Id NOT IN (SELECT DISTINCT StudentId FROM enrollment) ";
     
     $params = [];
     if (!empty($searchValue)) {
@@ -1428,31 +1395,257 @@ $sqlBase = " FROM students s WHERE s.Id NOT IN (SELECT DISTINCT StudentId FROM e
 }
 
 // --- 4. BACKEND ACTIONS ---
-
-if (isset($_POST['action']) && $_POST['action'] === 'generate_monthly_fees') {
-    $month = date('m');
-    $year = date('Y');
-    // Sab active students uthao
-    $active = $pdo->query("SELECT Id FROM enrollment WHERE IsActive=1")->fetchAll();
-    
-    foreach ($active as $st) {
-        try {
-            $pdo->prepare("INSERT IGNORE INTO monthly_fees (EnrollmentId, Month, Year, Amount) VALUES (?, ?, ?, ?)")
-                ->execute([$st['Id'], $month, $year, getSet('default_monthly_fee') ?: 500]);
-        } catch (Exception $e) {}
-    }
-    $msg = "Current Month Fees Generated!";
+// --- DELETE MONTHLY SALARY RECORD ---
+if (isset($_POST['action']) && $_POST['action'] === 'delete_staff_salary' && can('manage_salaries')) {
+    $pdo->prepare("DELETE FROM staff_monthly_salaries WHERE id=?")->execute([$_POST['salary_id']]);
+    $msg = "Salary record deleted permanently.";
+    $msgType = "danger";
 }
 
-if (isset($_POST['action']) && $_POST['action'] === 'pay_monthly_fee') {
-    $pdo->prepare("UPDATE monthly_fees SET Status='Paid', PaidDate=NOW(), CollectedBy=? WHERE Id=?")
-        ->execute([$_SESSION['user_id'], $_POST['fee_id']]);
+// --- DELETE SINGLE TIMESHEET RECORD ---
+if (isset($_POST['action']) && $_POST['action'] === 'delete_timesheet_record' && can('manage_salaries')) {
+    $pdo->prepare("DELETE FROM staff_timesheets WHERE id=?")->execute([$_POST['ts_id']]);
+    $msg = "Daily timesheet record deleted.";
+    $msgType = "danger";
+}
+
+// --- EDIT SINGLE TIMESHEET RECORD (From Popup) ---
+// --- EDIT SINGLE TIMESHEET RECORD (From Popup) ---
+if (isset($_POST['action']) && $_POST['action'] === 'update_single_timesheet' && can('manage_salaries')) {
+    $id = $_POST['ts_id'];
+    $time_in = !empty($_POST['time_in']) ? $_POST['time_in'] : null;
+    $time_out = !empty($_POST['time_out']) ? $_POST['time_out'] : null;
+    $status = $_POST['status'];
+    $duty = $_POST['duty_type'];
+    
+    // We need the date of this specific record to know if it was a Saturday
+    $tsDate = $pdo->query("SELECT date FROM staff_timesheets WHERE id = $id")->fetchColumn();
+    $dayOfWeek = date('w', strtotime($tsDate));
+    
+    $worked_hours = 0;
+    if (in_array($status, ['On Time', 'Late', 'Compensation'])) {
+        if ($time_in && $time_out) {
+            $t1 = strtotime($time_in);
+            $t2 = strtotime($time_out);
+            $worked_hours = round(($t2 - $t1) / 3600, 2);
+        }
+    } elseif ($status === 'Holiday') {
+        // Apply your exact Federal Holiday paid hours logic
+        if ($dayOfWeek == 6) { 
+            $worked_hours = 1.75; 
+        } elseif ($dayOfWeek == 0) { 
+            $worked_hours = 0; 
+        } else { 
+            $worked_hours = 3.00; 
+        }
+        $time_in = null; 
+        $time_out = null;
+    }
+    
+    $pdo->prepare("UPDATE staff_timesheets SET time_in=?, time_out=?, status=?, duty_type=?, worked_hours=? WHERE id=?")
+        ->execute([$time_in, $time_out, $status, $duty, $worked_hours, $id]);
         
-    // General Ledger mein entry auto-sync karna
-    $pdo->prepare("INSERT INTO general_income (Title, Category, Amount, Date, ReceivedBy) VALUES (?, 'Monthly Fees', ?, NOW(), ?)")
-        ->execute(['Fee from Enr ID: '.$_POST['enr_id'], $_POST['amount'], $_SESSION['user_id']]);
+    $msg = "Timesheet record updated successfully! Please click 'Calculate' on the salary screen to refresh the totals.";
+    $msgType = "success";
+}
+
+// --- STAFF DAILY TIMESHEETS (SMART SCHEDULING & HOLIDAYS) ---
+if (isset($_POST['action']) && $_POST['action'] === 'save_staff_attendance' && can('manage_salaries')) {
+    $date = $_POST['date'];
+    $dayOfWeek = date('w', strtotime($date)); // 0 = Sunday, 6 = Saturday
+    
+    foreach ($_POST['attendance'] as $t_id => $data) {
+        $status = $data['status'];
+        $duty_type = $data['duty_type'] ?? 'Working Hour';
+        $time_in = !empty($data['time_in']) ? $data['time_in'] : null;
+        $time_out = !empty($data['time_out']) ? $data['time_out'] : null;
         
-    $msg = "Monthly Fee Paid and Synced with Ledger!";
+        $worked_hours = 0;
+        
+        if (in_array($status, ['On Time', 'Late', 'Compensation'])) {
+            if ($time_in && $time_out) {
+                $t1 = strtotime($time_in);
+                $t2 = strtotime($time_out);
+                $worked_hours = round(($t2 - $t1) / 3600, 2);
+            }
+        } elseif ($status === 'Holiday') {
+            // FEDERAL HOLIDAY LOGIC: Give them the paid hours they would have worked
+            if ($dayOfWeek == 6) { 
+                $worked_hours = 1.75; // Saturday (3:00 to 4:45 is 1 hr 45 mins)
+            } elseif ($dayOfWeek == 0) { 
+                $worked_hours = 0;    // Sunday (Off anyway)
+            } else { 
+                $worked_hours = 3.00; // Mon-Fri (3:00 to 6:00 is 3 hrs)
+            }
+            // Clear the actual punch times since they didn't physically clock in
+            $time_in = null;
+            $time_out = null;
+        }
+        // If 'Absent' or 'Forgot to Punch', worked_hours remains 0
+
+        $pdo->prepare("INSERT INTO staff_timesheets (teacher_id, date, time_in, time_out, status, duty_type, worked_hours) 
+                       VALUES (?, ?, ?, ?, ?, ?, ?) 
+                       ON DUPLICATE KEY UPDATE time_in=VALUES(time_in), time_out=VALUES(time_out), status=VALUES(status), duty_type=VALUES(duty_type), worked_hours=VALUES(worked_hours)")
+            ->execute([$t_id, $date, $time_in, $time_out, $status, $duty_type, $worked_hours]);
+    }
+    $msg = "Daily Timesheets Saved! (Holidays Auto-Calculated)";
+    $msgType = "success";
+}
+
+// --- FETCH EXCEL-LIKE POPUP DETAILS ---
+if (isset($_GET['action']) && $_GET['action'] === 'fetch_teacher_monthly_timesheet') {
+    $t_id = (int)$_GET['teacher_id'];
+    $m = (int)$_GET['month'];
+    $y = (int)$_GET['year'];
+    
+    $stmt = $pdo->prepare("SELECT * FROM staff_timesheets WHERE teacher_id = ? AND MONTH(date) = ? AND YEAR(date) = ? ORDER BY date ASC");
+    $stmt->execute([$t_id, $m, $y]);
+    $data = $stmt->fetchAll();
+    
+    header('Content-Type: application/json');
+    echo json_encode(['data' => $data]);
+    exit;
+}
+
+// --- STAFF SALARY ACTIONS ---
+if (isset($_POST['action']) && $_POST['action'] === 'generate_salaries' && can('manage_salaries')) {
+    $month = (int)$_POST['month'];
+    $year = (int)$_POST['year'];
+    
+    // Only generate for teachers in the Active Session
+    $activeTeachersSql = "SELECT DISTINCT t.id, t.base_salary 
+                          FROM teachers t 
+                          JOIN teacher_sessions ts ON t.id = ts.teacher_id 
+                          JOIN enrollmentsession s ON ts.session_id = s.Id 
+                          WHERE s.IsActive = 1";
+    $teachers = $pdo->query($activeTeachersSql)->fetchAll();
+    
+    $count = 0;
+    foreach ($teachers as $t) {
+        try {
+            $stmt = $pdo->prepare("INSERT IGNORE INTO staff_monthly_salaries (teacher_id, month, year, t_salary, status) VALUES (?, ?, ?, ?, 'Unpaid')");
+            $stmt->execute([$t['id'], $month, $year, $t['base_salary']]);
+            if ($stmt->rowCount() > 0) $count++;
+        } catch (Exception $e) {}
+    }
+    $monthName = date('F', mktime(0,0,0,$month,1));
+    $msg = "Generated initial salary sheets for $count teachers for $monthName $year.";
+    $msgType = "success";
+}
+
+if (isset($_POST['action']) && $_POST['action'] === 'save_salary_details' && can('manage_salaries')) {
+    $pdo->prepare("UPDATE staff_monthly_salaries SET t_salary=?, t_w_days=?, d_w_hours=?, t_w_hours=?, salary_per_hour=?, h_worked=?, salary_payable=?, aabtaab_salary=?, dq_salary=?, ulma_class_count=?, ulma_classes=?, g_total=? WHERE id=?")
+        ->execute([
+            $_POST['t_salary'], $_POST['t_w_days'], $_POST['d_w_hours'], $_POST['t_w_hours'], $_POST['salary_per_hour'], 
+            $_POST['h_worked'], $_POST['salary_payable'], $_POST['aabtaab_salary'], $_POST['dq_salary'], 
+            $_POST['ulma_class_count'], $_POST['ulma_classes'], $_POST['g_total'], $_POST['salary_id']
+        ]);
+    $msg = "Salary details updated and calculated successfully!";
+    $msgType = "success";
+}
+
+if (isset($_POST['action']) && $_POST['action'] === 'pay_staff_salary' && can('manage_salaries')) {
+    $salaryId = $_POST['salary_id'];
+    $total = $_POST['g_total'];
+    
+    // Update Salary Record
+    $pdo->prepare("UPDATE staff_monthly_salaries SET status='Paid', paid_date=NOW(), processed_by=? WHERE id=?")
+        ->execute([$_SESSION['user_id'], $salaryId]);
+
+    // Log to General Expenses automatically
+    $teacherName = $pdo->query("SELECT t.name FROM staff_monthly_salaries s JOIN teachers t ON s.teacher_id = t.id WHERE s.id = $salaryId")->fetchColumn();
+    $pdo->prepare("INSERT INTO general_expenses (Title, Category, Amount, Date, Description, AddedBy) VALUES (?, 'Salary', ?, NOW(), ?, ?)")
+        ->execute(["Salary Paid to $teacherName", $total, "Auto-generated from Salary Module", $_SESSION['user_id']]);
+
+    $msg = "Salary marked as Paid & Logged into General Ledger!";
+    $msgType = "success";
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'fetch_staff_salaries') {
+    $month = (int)($_GET['month'] ?? date('n'));
+    $year = (int)($_GET['year'] ?? date('Y'));
+
+    // NEW LOGIC: Show teacher IF they are in an Active Session OR if they already have a salary sheet for this specific month.
+    $sql = "SELECT t.id as teacher_id, t.name, t.phone, 
+                   s.id as salary_id, s.t_salary, s.t_w_days, s.d_w_hours, s.h_worked, s.g_total, s.status, s.paid_date 
+            FROM teachers t 
+            LEFT JOIN staff_monthly_salaries s ON t.id = s.teacher_id AND s.month = ? AND s.year = ?
+            WHERE t.id IN (
+                SELECT teacher_id FROM teacher_sessions ts 
+                JOIN enrollmentsession es ON ts.session_id = es.Id WHERE es.IsActive = 1
+            ) OR s.id IS NOT NULL
+            GROUP BY t.id";
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$month, $year]);
+    $data = [];
+
+    while ($row = $stmt->fetch()) {
+        $hasSalary = !empty($row['salary_id']);
+        
+        $statusBadge = '<span class="badge bg-secondary">Not Generated</span>';
+        if ($hasSalary) {
+            $statusBadge = ($row['status'] === 'Paid') 
+                ? '<span class="badge bg-success-subtle text-success border border-success"><i class="fas fa-check-circle"></i> Paid</span>' 
+                : '<span class="badge bg-danger-subtle text-danger border border-danger"><i class="fas fa-times-circle"></i> Unpaid</span>';
+        }
+
+        $actions = '';
+        if ($hasSalary) {
+            $rowJson = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
+            
+            // Calculate and Details buttons...
+            $actions .= "<button class='btn btn-sm btn-dark py-0 fw-bold me-1 shadow-sm' onclick='viewTimesheetDetails({$row['teacher_id']}, $month, $year, \"".addslashes($row['name'])."\")'><i class='fas fa-list'></i> Details</button>";
+            $actions .= "<button class='btn btn-sm btn-info py-0 fw-bold me-1 shadow-sm' onclick='openSalaryEditor({$row['salary_id']})'><i class='fas fa-calculator'></i> Calc</button>";
+            
+            if ($row['status'] === 'Unpaid' && $row['g_total'] > 0) {
+                $actions .= "<button class='btn btn-sm btn-success py-0 fw-bold shadow-sm' onclick='paySalary({$row['salary_id']}, {$row['g_total']}, \"".addslashes($row['name'])."\")'><i class='fas fa-money-bill-wave'></i> Pay</button>";
+            }
+            if ($row['status'] === 'Paid') {
+                $actions .= "<a href='?page=print_receipt&type=salary&id={$row['salary_id']}' target='_blank' class='btn btn-sm btn-secondary py-0 shadow-sm'><i class='fas fa-print'></i> Slip</a>";
+            }
+
+            // NEW: DELETE SALARY BUTTON
+            $actions .= "<form method='POST' class='d-inline ms-1' onsubmit=\"return confirm('Delete this salary record? This cannot be undone.');\">
+                            <input type='hidden' name='action' value='delete_staff_salary'>
+                            <input type='hidden' name='salary_id' value='{$row['salary_id']}'>
+                            <button class='btn btn-sm btn-danger py-0 fw-bold shadow-sm' title='Delete'><i class='fas fa-trash'></i></button>
+                         </form>";
+        }
+
+        $data[] = [
+            "<strong>{$row['name']}</strong>",
+            "Rs. " . number_format($row['t_salary'] ?? 0),
+            ($row['t_w_days'] ?? 0) . " Days",
+            ($row['d_w_hours'] ?? 0) . " Hrs",
+            "<span class='text-primary fw-bold'>" . ($row['h_worked'] ?? 0) . " Hrs</span>",
+            "<span class='fw-bold fs-6 text-success'>Rs. " . number_format($row['g_total'] ?? 0) . "</span>",
+            $statusBadge,
+            $actions
+        ];
+    }
+    header('Content-Type: application/json');
+    echo json_encode(['data' => $data]);
+    exit;
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'get_single_salary') {
+    // Fetch the salary profile
+    $stmt = $pdo->prepare("SELECT s.*, t.name FROM staff_monthly_salaries s JOIN teachers t ON s.teacher_id=t.id WHERE s.id = ?");
+    $stmt->execute([$_GET['id']]);
+    $salaryData = $stmt->fetch();
+    
+    // AUTO-SYNC: Calculate total decimal hours worked in this month from the timesheets
+    $workedQ = $pdo->prepare("SELECT SUM(worked_hours) FROM staff_timesheets WHERE teacher_id = ? AND MONTH(date) = ? AND YEAR(date) = ?");
+    $workedQ->execute([$salaryData['teacher_id'], $salaryData['month'], $salaryData['year']]);
+    $auto_worked_hours = $workedQ->fetchColumn() ?: 0;
+    
+    // Override the manual hours with the exact timesheet hours
+    $salaryData['h_worked'] = $auto_worked_hours;
+
+    header('Content-Type: application/json');
+    echo json_encode($salaryData);
+    exit;
 }
 
 // --- HASANAAT CARD SYSTEM ACTIONS ---
@@ -1460,16 +1653,17 @@ if (isset($_POST['action']) && $_POST['action'] === 'pay_monthly_fee') {
 if (isset($_POST['action']) && $_POST['action'] === 'save_card' && (can('hasanaat_add') || can('hasanaat_edit'))) {
     if (!empty($_POST['card_id'])) {
         // Edit
-        $sql = "UPDATE hasanaat_cards SET CardNumber=?, HolderName=?, FatherName=?, Reference=?, Mobile=?, CardType=?, TotalAmount=?, IssueDate=?, Notes=? WHERE Id=?";
-        $pdo->prepare($sql)->execute([$_POST['card_no'], $_POST['holder'], $_POST['father'], $_POST['ref'], $_POST['mobile'], $_POST['type'], $_POST['amount'], $_POST['date'], $_POST['notes'], $_POST['card_id']]);
+        $sql = "UPDATE hasanaat_cards SET NumberOfCards=?, HolderName=?, FatherName=?, Reference=?, Mobile=?, CardType=?, TotalAmount=?, IssueDate=?, Notes=? WHERE Id=?";
+        $pdo->prepare($sql)->execute([$_POST['num_cards'], $_POST['holder'], $_POST['father'], $_POST['ref'], $_POST['mobile'], $_POST['type'], $_POST['amount'], $_POST['date'], $_POST['notes'], $_POST['card_id']]);
         $msg = "Card Updated.";
     } else {
         // Add
-        $sql = "INSERT INTO hasanaat_cards (CardNumber, HolderName, FatherName, Reference, Mobile, CardType, TotalAmount, IssueDate, Notes) VALUES (?,?,?,?,?,?,?,?,?)";
-        $pdo->prepare($sql)->execute([$_POST['card_no'], $_POST['holder'], $_POST['father'], $_POST['ref'], $_POST['mobile'], $_POST['type'], $_POST['amount'], $_POST['date'], $_POST['notes']]);
-        $msg = "New Card Issued.";
+        $sql = "INSERT INTO hasanaat_cards (NumberOfCards, HolderName, FatherName, Reference, Mobile, CardType, TotalAmount, IssueDate, Notes) VALUES (?,?,?,?,?,?,?,?,?)";
+        $pdo->prepare($sql)->execute([$_POST['num_cards'], $_POST['holder'], $_POST['father'], $_POST['ref'], $_POST['mobile'], $_POST['type'], $_POST['amount'], $_POST['date'], $_POST['notes']]);
+        $msg = "New Cards Issued.";
     }
 }
+
 
 if (isset($_POST['action']) && $_POST['action'] === 'delete_card' && can('hasanaat_delete')) {
     $pdo->prepare("DELETE FROM hasanaat_cards WHERE Id=?")->execute([$_POST['card_id']]);
@@ -1646,6 +1840,120 @@ $waButton = "";
 $printButton = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+
+// --- MONTHLY FEES ACTIONS (UPGRADED) ---
+// --- MONTHLY FEES ACTIONS (UPGRADED) ---
+// --- MONTHLY FEES ACTIONS (UPGRADED) ---
+if (isset($_POST['action']) && $_POST['action'] === 'generate_monthly_fees') {
+    $month = (int)$_POST['month'];
+    $year = (int)$_POST['year'];
+    $classId = $_POST['class_id'] ?? '';
+    $sessId = $_POST['session_id'] ?? ''; 
+    $customAmount = $_POST['custom_amount'] ?? ''; // NAYA: Custom Amount Box
+
+    $sql = "SELECT Id, individual_monthly_fee FROM enrollment WHERE IsActive=1 AND EnrollmentSessionId=?";
+    $params = [$sessId];
+    if (!empty($classId)) {
+        $sql .= " AND Class = ?";
+        $params[] = $classId;
+    }
+    $active = $pdo->prepare($sql);
+    $active->execute($params);
+
+    $count = 0;
+    $defaultFee = getSet('default_monthly_fee') !== '' ? getSet('default_monthly_fee') : 0;
+    foreach ($active->fetchAll() as $st) {
+        
+        // AGAR BOX MEIN AMOUNT LIKHI HAI TO WO USE HOGI, WARNA DEFAULT/INDIVIDUAL
+        if (is_numeric($customAmount) && $customAmount >= 0) {
+            $feeAmt = $customAmount;
+        } else {
+            $feeAmt = $st['individual_monthly_fee'] > 0 ? $st['individual_monthly_fee'] : $defaultFee;
+        }
+
+        try {
+            $stmt = $pdo->prepare("INSERT IGNORE INTO monthly_fees (EnrollmentId, Month, Year, Amount, Status) VALUES (?, ?, ?, ?, 'Unpaid')");
+            $stmt->execute([$st['Id'], $month, $year, $feeAmt]);
+            if ($stmt->rowCount() > 0) $count++;
+        } catch (Exception $e) {}
+    }
+    $monthName = date('F', mktime(0,0,0,$month,1));
+    $msg = "Successfully generated fees for $count students for $monthName $year!";
+    $msgType = "success";
+}
+if (isset($_POST['action']) && $_POST['action'] === 'pay_monthly_fee') {
+    $feeId = $_POST['fee_id'];
+    $enrId = $_POST['enr_id'];
+    $amount = $_POST['amount'];
+    $month = $_POST['month'];
+    $year = $_POST['year'];
+
+    if (empty($feeId)) {
+        $pdo->prepare("INSERT INTO monthly_fees (EnrollmentId, Month, Year, Amount, Status, PaidDate, CollectedBy) VALUES (?, ?, ?, ?, 'Paid', NOW(), ?)")
+            ->execute([$enrId, $month, $year, $amount, $_SESSION['user_id']]);
+        $feeId = $pdo->lastInsertId();
+    } else {
+        $pdo->prepare("UPDATE monthly_fees SET Status='Paid', PaidDate=NOW(), CollectedBy=?, Amount=? WHERE Id=?")
+            ->execute([$_SESSION['user_id'], $amount, $feeId]);
+    }
+
+    $monthName = date('M', mktime(0,0,0,$month,1));
+    $pdo->prepare("INSERT INTO general_income (Title, Category, Amount, Date, ReceivedBy) VALUES (?, 'Monthly Fees', ?, NOW(), ?)")
+        ->execute(["Monthly Fee (Enr: $enrId - $monthName $year)", $amount, $_SESSION['user_id']]);
+
+    $msg = "Fee of Rs. $amount marked as Paid & Synced with Ledger!";
+    $msgType = "success";
+}
+
+if (isset($_POST['action']) && $_POST['action'] === 'revert_monthly_fee') {
+    $pdo->prepare("UPDATE monthly_fees SET Status='Unpaid', PaidDate=NULL, CollectedBy=NULL WHERE Id=?")->execute([$_POST['fee_id']]);
+    $msg = "Fee record reverted to Unpaid.";
+    $msgType = "warning";
+}
+
+// NAYA: Edit Fee Amount
+if (isset($_POST['action']) && $_POST['action'] === 'edit_monthly_fee') {
+    $pdo->prepare("UPDATE monthly_fees SET Amount=? WHERE Id=?")->execute([$_POST['amount'], $_POST['fee_id']]);
+    $msg = "Fee amount updated successfully.";
+    $msgType = "info";
+}
+
+// NAYA: Delete Fee Record
+if (isset($_POST['action']) && $_POST['action'] === 'delete_monthly_fee') {
+    $pdo->prepare("DELETE FROM monthly_fees WHERE Id=?")->execute([$_POST['fee_id']]);
+    $msg = "Generated fee record deleted.";
+    $msgType = "danger";
+}
+
+// NAYA: Ek saath poore mahine ki fees delete karne ke liye
+if (isset($_POST['action']) && $_POST['action'] === 'bulk_delete_monthly_fees') {
+    $month = (int)$_POST['month'];
+    $year = (int)$_POST['year'];
+    $sessId = $_POST['session_id'];
+    $classId = $_POST['class_id'] ?? '';
+
+    // Query jo sirf Unpaid fees ko delete karegi taake jo log paise de chuke hain unka record bach jaye
+    $sql = "DELETE FROM monthly_fees 
+            WHERE Month = ? AND Year = ? AND Status = 'Unpaid'
+            AND EnrollmentId IN (SELECT Id FROM enrollment WHERE EnrollmentSessionId = ?)";
+    
+    $params = [$month, $year, $sessId];
+    
+    // Agar koi makhsoos class select ki hai to sirf uski delete hogi
+    if (!empty($classId)) {
+        $sql = "DELETE FROM monthly_fees 
+                WHERE Month = ? AND Year = ? AND Status = 'Unpaid'
+                AND EnrollmentId IN (SELECT Id FROM enrollment WHERE EnrollmentSessionId = ? AND Class = ?)";
+        $params[] = $classId;
+    }
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $count = $stmt->rowCount();
+
+    $msg = "Wiped $count incorrect Unpaid fee records for this period.";
+    $msgType = "danger";
+}
 
     // --- RESTORE DATABASE ACTION (Advanced) ---
     if (isset($_POST['action']) && $_POST['action'] === 'restore_database' && (can('backup_db') || $_SESSION['role'] === 'admin')) {
@@ -1869,81 +2177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     }
 
-    // --- DUPLICATES: Find / Merge / Delete ---
-
-    if (isset($_POST['action']) && $_POST['action'] === 'merge_duplicate' && can('student_edit')) {
-
-        $keep = (int) ($_POST['keep_id'] ?? 0);
-
-        $remove = (int) ($_POST['remove_id'] ?? 0);
-
-        if ($keep && $remove && $keep !== $remove) {
-
-            try {
-
-                $pdo->beginTransaction();
-
-                // Move enrollments and related references
-
-                $pdo->prepare("UPDATE enrollment SET StudentId = ? WHERE StudentId = ?")->execute([$keep, $remove]);
-
-                $pdo->prepare("UPDATE prizes SET student_id = ? WHERE student_id = ?")->execute([$keep, $remove]);
-
-                // If there are other tables referencing student id, add similar UPDATEs here
-
-                // Finally delete the duplicate student record
-
-                $pdo->prepare("DELETE FROM students WHERE Id = ?")->execute([$remove]);
-
-                $pdo->commit();
-
-                $msg = "Merged student $remove into $keep.";
-
-                logAction('Merge Students', "Keep:$keep Remove:$remove");
-
-            } catch (Exception $e) {
-
-                $pdo->rollBack();
-
-                $msg = "Merge Failed: " . $e->getMessage();
-
-                $msgType = "danger";
-
-            }
-
-        } else {
-            $msg = "Invalid selection.";
-            $msgType = "danger";
-        }
-
-    }
-
-    if (isset($_POST['action']) && $_POST['action'] === 'delete_duplicate' && can('student_delete')) {
-
-        $sid = (int) ($_POST['student_id'] ?? 0);
-
-        if ($sid > 0) {
-
-            // Prevent deletion if student has active enrollments
-
-            $cnt = $pdo->prepare("SELECT COUNT(*) FROM enrollment WHERE StudentId = ?");
-            $cnt->execute([$sid]);
-
-            if ($cnt->fetchColumn() > 0) {
-                $msg = "Cannot delete: Student has enrollments.";
-                $msgType = "danger";
-            } else {
-                $pdo->prepare("DELETE FROM students WHERE Id = ?")->execute([$sid]);
-                $msg = "Deleted.";
-                logAction('Delete Student', "Deleted duplicate student $sid");
-            }
-
-        } else {
-            $msg = "Invalid Student.";
-            $msgType = "danger";
-        }
-
-    }
+     
 // --- 1. SETTINGS SAVE ACTION (NEW) ---
 // --- 1. SETTINGS SAVE ACTION (UPDATED WITH LOGO UPLOAD) ---
     if (isset($_POST['action']) && $_POST['action'] === 'update_settings' && $_SESSION['role'] === 'admin') {
@@ -2074,16 +2308,25 @@ if (isset($_POST['action']) && $_POST['action'] === 'delete_session' && can('man
                 JOIN users u ON t.user_id = u.id 
                 WHERE u.role != 'teacher'");
 
-        $msg = "Teacher List Synced! (Non-teachers removed)";
+        // NEW: Auto-migrate existing teachers into the new Session Payroll table!
+        $pdo->exec("INSERT IGNORE INTO teacher_sessions (teacher_id, session_id)
+                    SELECT DISTINCT t.id, c.session_id 
+                    FROM teachers t 
+                    JOIN class_teachers ct ON t.user_id = ct.user_id 
+                    JOIN classmanifest c ON ct.class_id = c.Class 
+                    JOIN enrollmentsession s ON c.session_id = s.Id
+                    WHERE c.session_id IS NOT NULL AND c.session_id != 0 AND s.IsActive = 1");
+
+        $msg = "Teacher List & Payroll Sessions Synced!";
+    
     }
 
     // --- REPLACE existing if (isset($_POST['action']) && $_POST['action'] === 'add_teacher') block ---
 
     // --- UPDATED ADD TEACHER (Manual Password + Duplicate Check + Class Assign) ---
 
+    // --- ADD TEACHER ---
     if (isset($_POST['action']) && $_POST['action'] === 'add_teacher' && can('manage_teachers')) {
-
-        // 1. Check if Username/Email already exists
         $check = $pdo->prepare("SELECT id FROM users WHERE name=? OR email=?");
         $check->execute([$_POST['username'], $_POST['email']]);
 
@@ -2091,49 +2334,50 @@ if (isset($_POST['action']) && $_POST['action'] === 'delete_session' && can('man
             $msg = "Error: Username or Email already exists.";
             $msgType = "danger";
         } else {
-            // 2. Create Login User
-            // We capture the password typed in the form ($_POST['password'])
-            // We MUST use password_hash, otherwise login will fail.
             $passHash = password_hash($_POST['password'], PASSWORD_DEFAULT);
-
-            $pdo->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, 'teacher')")
-                ->execute([$_POST['username'], $_POST['email'], $passHash]);
-
+            $pdo->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, 'teacher')")->execute([$_POST['username'], $_POST['email'], $passHash]);
             $newUserId = $pdo->lastInsertId();
 
-            // 3. Create Teacher Profile linked to User
-            $pdo->prepare("INSERT INTO teachers (name, gender, phone, notes, user_id) VALUES (?,?,?,?,?)")
-                ->execute([$_POST['username'], $_POST['gender'], $_POST['phone'], $_POST['notes'], $newUserId]);
+            $pdo->prepare("INSERT INTO teachers (name, gender, phone, notes, user_id) VALUES (?,?,?,?,?)")->execute([$_POST['username'], $_POST['gender'], $_POST['phone'], $_POST['notes'], $newUserId]);
+            $newTeacherId = $pdo->lastInsertId(); // Get the actual Teacher ID
 
-            // 4. Assign Classes (If selected)
+            // Save Assigned Classes
             if (!empty($_POST['assigned_classes'])) {
                 foreach ($_POST['assigned_classes'] as $classId) {
-                    $pdo->prepare("INSERT INTO class_teachers (class_id, user_id) VALUES (?,?)")
-                        ->execute([$classId, $newUserId]);
+                    $pdo->prepare("INSERT INTO class_teachers (class_id, user_id) VALUES (?,?)")->execute([$classId, $newUserId]);
                 }
             }
-
+            
+            // NEW: Save Assigned Sessions
+            if (!empty($_POST['assigned_sessions'])) {
+                foreach ($_POST['assigned_sessions'] as $sessId) {
+                    $pdo->prepare("INSERT INTO teacher_sessions (teacher_id, session_id) VALUES (?,?)")->execute([$newTeacherId, $sessId]);
+                }
+            }
             $msg = "Teacher Account Created Successfully.";
         }
     }
 
-    // --- REPLACE existing 'edit_teacher' block ---
+    // --- EDIT TEACHER ---
     if (isset($_POST['action']) && $_POST['action'] === 'edit_teacher' && can('manage_teachers')) {
-        // 1. Get the linked User ID first
         $stmt = $pdo->prepare("SELECT user_id FROM teachers WHERE id = ?");
         $stmt->execute([$_POST['id']]);
         $linkedUserId = $stmt->fetchColumn();
 
-        // 2. Update Teacher Profile
-        $pdo->prepare("UPDATE teachers SET name=?, gender=?, phone=?, notes=? WHERE id=?")
-            ->execute([$_POST['name'], $_POST['gender'], $_POST['phone'], $_POST['notes'], $_POST['id']]);
+        $pdo->prepare("UPDATE teachers SET name=?, gender=?, phone=?, notes=? WHERE id=?")->execute([$_POST['name'], $_POST['gender'], $_POST['phone'], $_POST['notes'], $_POST['id']]);
 
-        // 3. Update Linked Login Account (if exists)
         if ($linkedUserId) {
             $pdo->prepare("UPDATE users SET name=? WHERE id=?")->execute([$_POST['name'], $linkedUserId]);
         }
 
-        $msg = "Teacher Profile & Login Updated.";
+        // NEW: Update Assigned Sessions
+        $pdo->prepare("DELETE FROM teacher_sessions WHERE teacher_id=?")->execute([$_POST['id']]);
+        if (!empty($_POST['assigned_sessions'])) {
+            foreach ($_POST['assigned_sessions'] as $sessId) {
+                $pdo->prepare("INSERT INTO teacher_sessions (teacher_id, session_id) VALUES (?,?)")->execute([$_POST['id'], $sessId]);
+            }
+        }
+        $msg = "Teacher Profile & Sessions Updated.";
     }
 
     // --- REPLACE existing 'delete_teacher' block ---
@@ -2283,14 +2527,15 @@ if (isset($_POST['action']) && $_POST['action'] === 'manual_assign' && can('enro
         $currentEnrollment->execute([$studentId]);
         $existing = $currentEnrollment->fetch();
 
-        $sessId = intval($_POST['session_id'] ?? 0);
-        if (!$sessId && $existing) {
-            $sessId = intval($existing['EnrollmentSessionId']);
-        }
+$sessId = intval($_POST['session_id'] ?? 0);
+    if (!$sessId && $existing) {
+        $sessId = intval($existing['EnrollmentSessionId']);
+    }
 
-        $pdo->prepare("UPDATE enrollment SET IsActive = 0 WHERE StudentId = ?")->execute([$studentId]);
-        
-        $newEnrId = $pdo->query("SELECT COALESCE(MAX(Id),0)+1 FROM enrollment")->fetchColumn();
+    // FIX: Only deactivate previous enrollment in the SAME session. Old session records remain untouched!
+    $pdo->prepare("UPDATE enrollment SET IsActive = 0 WHERE StudentId = ? AND EnrollmentSessionId = ?")->execute([$studentId, $sessId]);
+
+    $newEnrId = $pdo->query("SELECT COALESCE(MAX(Id),0)+1 FROM enrollment")->fetchColumn();
         $collectedBy = $_SESSION['user_id'] ?? null;
         $stmt = $pdo->prepare("INSERT INTO enrollment (Id, StudentId, Class, EnrollmentSessionId, IsActive, enrollment_fee, individual_monthly_fee, collected_by) VALUES (?, ?, ?, ?, 1, ?, ?, ?)");
         $stmt->execute([$newEnrId, $studentId, $classId, $sessId, $enrollmentFee, $monthlyFee, $collectedBy]);
@@ -2658,16 +2903,16 @@ if (isset($_POST['action']) && $_POST['action'] === 'attendance' && can('attenda
             $sess = getActiveSessions($pdo);
             if ($sess) {
                 // 1. Fetch Student & Class Info for WhatsApp Message
-                $stmt = $pdo->prepare("SELECT s.Name, s.MobileNumberFather, s.MobileNumberMother, c.ClassName, c.WhatsappLink FROM students s LEFT JOIN classmanifest c ON c.Class = ? WHERE s.Id = ?");
-                $stmt->execute([$_POST['class_id'], $_POST['student_id']]);
-                $info = $stmt->fetch();
+            $stmt = $pdo->prepare("SELECT s.Name, s.MobileNumberFather, s.MobileNumberMother, c.ClassName, c.WhatsappLink FROM students s LEFT JOIN classmanifest c ON c.Class = ? WHERE s.Id = ?");
+            $stmt->execute([$_POST['class_id'], $_POST['student_id']]);
+            $info = $stmt->fetch();
 
-                // 2. FIX: Delete old active enrollment first to prevent duplicates!
-                $pdo->prepare("DELETE FROM enrollment WHERE StudentId=? AND IsActive=1")->execute([$_POST['student_id']]);
+            // 2. Use the selected session
+            $correctSessionId = intval($_POST['session_id'] ?? 0);
+            $sessName = 'Selected Session';
 
-                // 3. Use the selected session
-                $correctSessionId = intval($_POST['session_id'] ?? 0);
-                $sessName = 'Selected Session';
+            // 3. FIX: Do NOT delete globally! Just deactivate their old enrollment in the TARGET SESSION ONLY.
+            $pdo->prepare("UPDATE enrollment SET IsActive = 0 WHERE StudentId=? AND EnrollmentSessionId=?")->execute([$_POST['student_id'], $correctSessionId]);
                 $timings = 'Check Schedule';
 
                 $fee = !empty($_POST['enrollment_fee']) ? $_POST['enrollment_fee'] : 0;
@@ -2742,7 +2987,7 @@ $available_permissions = [
     'ledger_view' => 'View General Ledger', 'income_add' => 'Add Income', 'income_edit' => 'Edit Income', 'income_delete' => 'Delete Income', 'expense_add' => 'Add Expense', 'expense_edit' => 'Edit Expense', 'expense_delete' => 'Delete Expense',
     
     'budget_view' => 'View Budget Plan', 'budget_manage' => 'Manage Budget Targets',
-    'view_fee_report' => 'View Fee Report', 'edit_fee' => 'Edit Fee', 'delete_fee' => 'Delete Fee', 'prune_fees' => 'Prune Fees',
+    'view_fee_report' => 'View Fee Report', 'edit_fee' => 'Edit Fee', 'delete_fee' => 'Delete Fee', 'prune_fees' => 'Prune Fees', 'manage_monthly_fees' => 'Manage Monthly Fees',
     
 // Nayi Permissions
     'manage_exams' => 'Manage Exams & Budget (Admin)', 'enter_marks' => 'Enter Exam Marks (Teachers)', 'view_reports' => 'View Results',
@@ -2750,7 +2995,7 @@ $available_permissions = [
     
     'manage_roles' => 'Manage Roles', 'manage_users' => 'Manage Users', 'view_logs' => 'View Logs', 'delete_logs' => 'Delete Logs', 'backup_db' => 'Backup DB',
     'manage_sessions' => 'Manage Sessions', 'manage_classes' => 'Manage Classes', 'manage_teachers' => 'Manage Teachers',
-    
+'manage_salaries' => 'Manage Staff Salaries',    
     // Print Permissions
     'print_receipts' => 'Print Finance Receipts', 'print_slips' => 'Print Enrollment Slips & IDs'
 ];
@@ -2761,8 +3006,8 @@ if ($page === 'print_receipt' && (can('print_receipts') || $_SESSION['role'] ===
     $data = [];
     $title = "RECEIPT";
 
-    if ($type == 'hasanaat') {
-        $stmt = $pdo->prepare("SELECT p.*, h.CardNumber, h.HolderName FROM hasanaat_payments p JOIN hasanaat_cards h ON p.CardId=h.Id WHERE p.Id=?");
+        if ($type == 'hasanaat') {
+        $stmt = $pdo->prepare("SELECT p.*, h.NumberOfCards, h.HolderName FROM hasanaat_payments p JOIN hasanaat_cards h ON p.CardId=h.Id WHERE p.Id=?");
         $stmt->execute([$id]);
         $row = $stmt->fetch();
         if ($row) {
@@ -2770,7 +3015,7 @@ if ($page === 'print_receipt' && (can('print_receipts') || $_SESSION['role'] ===
             $data = [
                 'Receipt No' => 'H-' . $row['Id'],
                 'Date' => date('d-M-Y', strtotime($row['Date'])),
-                'Card Number' => $row['CardNumber'],
+                'Number of Cards' => $row['NumberOfCards'],
                 'Card Holder' => $row['HolderName'],
                 'Amount Received' => number_format($row['Amount']),
                 'Remarks' => $row['Remarks']
@@ -2819,6 +3064,23 @@ if ($page === 'print_receipt' && (can('print_receipts') || $_SESSION['role'] ===
                 'Received From' => $row['Title'],
                 'Amount Received' => number_format($row['Amount']),
                 'Description' => $row['Description']
+            ];
+        }
+    } elseif ($type == 'salary') {
+        $stmt = $pdo->prepare("SELECT s.*, t.name FROM staff_monthly_salaries s JOIN teachers t ON s.teacher_id=t.id WHERE s.id=?");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        if ($row) {
+            $monthName = date('F', mktime(0,0,0,$row['month'],1));
+            $title = "STAFF SALARY SLIP - " . strtoupper($monthName . ' ' . $row['year']);
+            $data = [
+                'Voucher No' => 'SAL-' . $row['id'],
+                'Staff Name' => $row['name'],
+                'Base/Target Salary' => number_format($row['t_salary']),
+                'Total Hours Worked' => $row['h_worked'],
+                'Allowances (Bonus, Other, Ulama)' => number_format($row['aabtaab_salary'] + $row['dq_salary'] + $row['ulma_classes']),
+                'Grand Total Paid' => number_format($row['g_total']),
+                'Payment Date' => date('d-M-Y', strtotime($row['paid_date']))
             ];
         }
     }
@@ -4075,8 +4337,12 @@ if (isLoggedIn() && isset($_GET['page']) && $_GET['page'] === 'print_student_res
                         <a href="?page=fee_report" class="menu-link"><i class="fas fa-file-invoice-dollar"></i> Fee Report</a>
                     <?php endif; ?>
 
-                    <a href="?page=age_calculator" class="menu-link"><i class="fas fa-calculator"></i> Age Calculator</a>
-                    <a href="?page=duplicates" class="menu-link"><i class="fas fa-clone"></i> Duplicates</a>
+<a href="?page=monthly_fees" class="menu-link <?= $page == 'monthly_fees' ? 'active' : '' ?>">
+    <i class="fas fa-calendar-alt text-warning me-2"></i> Monthly Fees
+</a>
+
+                     
+
 
                     <?php if (can('student_view')): ?>
                         <div class="menu-section">Academics</div>
@@ -4111,6 +4377,7 @@ if (isLoggedIn() && isset($_GET['page']) && $_GET['page'] === 'print_student_res
                     <a href="?page=exams" class="menu-link"><i class="fas fa-poll-h"></i> Exams</a>
                     <a href="?page=certificates" class="menu-link"><i class="fas fa-certificate me-2"></i> Certificates</a>
 
+
                     <?php if (can('view_attendance_report')): ?>
                         <a href="?page=attendance_report" class="menu-link"><i class="fas fa-calendar-alt me-2"></i> Attendance Report</a>
                     <?php endif; ?>
@@ -4126,6 +4393,7 @@ if (isLoggedIn() && isset($_GET['page']) && $_GET['page'] === 'print_student_res
 
                         <?php if (can('backup_db') || $_SESSION['role'] === 'admin'): ?>
                             <a href="?page=backup" class="menu-link"><i class="fas fa-database"></i> Backup DB</a>
+                    <a href="?page=schema" class="menu-link"><i class="fas fa-database me-2"></i> Database Schema</a>
                         <?php endif; ?>
 
                         <?php if ($_SESSION['role'] === 'admin'): ?>
@@ -4174,14 +4442,18 @@ if (isLoggedIn() && isset($_GET['page']) && $_GET['page'] === 'print_student_res
                                         class="fas fa-file-invoice-dollar me-2"></i> Fee Report</a>
                             <?php endif; ?>
 
+<?php if (can('manage_monthly_fees')): ?>
+                                <a href="?page=monthly_fees" class="<?= $page == 'monthly_fees' ? 'active' : '' ?>">
+                                    <i class="fas fa-calendar-alt text-warning me-2"></i> Monthly Fees
+                                </a>
+                            <?php endif; ?>
+
                             <a href="?page=profile" class="<?= $page == 'profile' ? 'active' : '' ?>"><i
                                     class="fas fa-user-edit me-2"></i> My Profile</a>
 
-                            <a href="?page=age_calculator" class="<?= $page == 'age_calculator' ? 'active' : '' ?>"><i
-                                    class="fas fa-calculator me-2"></i> Age Calculator</a>
+                            
 
-                            <a href="?page=duplicates" class="<?= $page == 'duplicates' ? 'active' : '' ?>"><i
-                                    class="fas fa-clone me-2"></i> Duplicates</a>
+                            
 
 
                             <?php if (can('manage_roles') || can('manage_sessions') || can('manage_classes') || can('view_logs')): ?>
@@ -4213,6 +4485,8 @@ if (isLoggedIn() && isset($_GET['page']) && $_GET['page'] === 'print_student_res
     <a href="?page=settings" class="<?= $page == 'settings' ? 'active' : '' ?>">
         <i class="fas fa-cogs me-2"></i> Settings
     </a>
+
+                            <a href="?page=schema" class="<?= $page=='schema'?'active':'' ?>"><i class="fas fa-database me-2"></i> Database Schema</a>
 <?php endif; ?>
 
                             <?php endif; ?>
@@ -4262,7 +4536,15 @@ if (isLoggedIn() && isset($_GET['page']) && $_GET['page'] === 'print_student_res
                                     <i class="fas fa-trophy me-2"></i> Prizes</a><?php endif; ?>
 
                             <div class="nav-label">Finance Module</div>
-
+                            
+<?php if (can('manage_salaries')): ?>
+    <a href="?page=staff_timesheet" class="<?= $page == 'staff_timesheet' ? 'active' : '' ?>">
+                                <i class="fas fa-clock me-2"></i> Daily Timesheet
+                            </a>
+    <a href="?page=staff_salary" class="<?= $page == 'staff_salary' ? 'active' : '' ?>">
+        <i class="fas fa-money-check-alt text-success me-2"></i> Staff Salaries
+    </a>
+<?php endif; ?>
                             <?php if (can('ledger_view')): ?>
                                 <a href="?page=general_ledger" class="<?= $page == 'general_ledger' ? 'active' : '' ?>">
                                     <i class="fas fa-book me-2"></i> General Ledger
@@ -4296,6 +4578,7 @@ if (isLoggedIn() && isset($_GET['page']) && $_GET['page'] === 'print_student_res
                             <a href="?page=certificates" class="<?= $page == 'certificates' ? 'active' : '' ?>">
                                 <i class="fas fa-certificate me-2"></i> Certificates
                             </a>
+
 
                             <?php if (can('view_attendance_report')): ?>
                                 <a href="?page=attendance_report" class="<?= $page == 'attendance_report' ? 'active' : '' ?>">
@@ -4653,68 +4936,7 @@ if (isLoggedIn() && isset($_GET['page']) && $_GET['page'] === 'print_student_res
                         <?php endif; ?>
 
                         <!-- DUPLICATES MODULE -->
-                        <?php if ($page === 'duplicates' && can('student_view')): ?>
-                            <div class="card">
-                                <div class="card-header">Duplicate Finder</div>
-                                <div class="card-body">
-                                    <div class="alert alert-info">This tool identifies students with the same Name + DOB or same
-                                        Phone Number. You can safely merge or delete duplicates.</div>
-                                    <form method="post" style="display:inline-block;margin-bottom:10px;">
-                                        <input type="hidden" name="action" value="merge_all_duplicates">
-                                        <button type="submit" class="btn btn-warning"
-                                            onclick="return confirm('Are you sure you want to merge all duplicates? This cannot be undone.')">Merge
-                                            All Duplicates</button>
-                                    </form>
-                                    <table class="table table-bordered datatable-basic">
-                                        <thead>
-                                            <tr>
-                                                <th>Group</th>
-                                                <th>Student ID</th>
-                                                <th>Name</th>
-                                                <th>DOB</th>
-                                                <th>Phone</th>
-                                                <th>Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php
-                                            $sql = "SELECT s1.Id as StudentId, s1.Name, s1.DOB, s1.MobileNumberFather, s1.MobileNumberMother, 
-                                    GROUP_CONCAT(s2.Id) as DuplicateIds
-                                    FROM students s1
-                                    JOIN students s2 ON s1.Id != s2.Id AND (s1.Name = s2.Name AND s1.DOB = s2.DOB OR s1.MobileNumberFather = s2.MobileNumberFather)
-                                    GROUP BY s1.Id";
-                                            $duplicates = $pdo->query($sql)->fetchAll();
-                                            foreach ($duplicates as $dup) {
-                                                $dupIds = explode(',', $dup['DuplicateIds']);
-                                                foreach ($dupIds as $dupId) {
-                                                    echo "<tr>
-                                        <td>{$dup['StudentId']}</td>
-                                        <td>{$dupId}</td>
-                                        <td>{$dup['Name']}</td>
-                                        <td>{$dup['DOB']}</td>
-                                        <td>{$dup['MobileNumberFather']}</td>
-                                        <td>
-                                            <form method='POST' class='d-inline'>
-                                                <input type='hidden' name='action' value='merge_duplicate'>
-                                                <input type='hidden' name='keep_id' value='{$dup['StudentId']}'>
-                                                <input type='hidden' name='remove_id' value='{$dupId}'>
-                                                <button class='btn btn-sm btn-success'>Merge</button>
-                                            </form>
-                                            <form method='POST' class='d-inline' onsubmit='return confirm(\"Delete this duplicate?\");'>
-                                                <input type='hidden' name='action' value='delete_duplicate'>
-                                                <input type='hidden' name='student_id' value='{$dupId}'>
-                                                <button class='btn btn-sm btn-danger'>Delete</button>
-                                            </form>
-                                        </td>
-                                    </tr>";
-                                                }
-                                            }
-                                            ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        <?php endif; ?>
+                         
 
                         <?php if ($page === 'general_ledger' && can('ledger_view')): ?>
                             <?php
@@ -4735,18 +4957,27 @@ $totalExpense = $tabarruk + $generalExp + $hasanaat;
                             $balance = $totalIncome - $totalExpense;
 
                             // 3. Ledger Query (With RawTitle and RawDesc for Modals)
-                            $sql = "
+                               $sql = "
         SELECT 'Fee Collection' as Type, CONCAT('Student ID: ', StudentId) as Ref, created_at as Date, enrollment_fee as Credit, 0 as Debit, 0 as ID, '' as RawTitle, '' as RawDesc FROM enrollment WHERE enrollment_fee > 0 AND created_at BETWEEN '$start 00:00:00' AND '$end 23:59:59'
         UNION ALL
-        SELECT 'Hasanaat Payment (Redeemed)', CONCAT('Card #', (SELECT CardNumber FROM hasanaat_cards WHERE Id=hasanaat_payments.CardId)), Date, 0, Amount, Id, '' as RawTitle, '' as RawDesc FROM hasanaat_payments WHERE Date BETWEEN '$start' AND '$end'
+        SELECT 'Hasanaat Payment (Redeemed)', CONCAT('Card #', (SELECT NumberOfCards FROM hasanaat_cards WHERE Id=hasanaat_payments.CardId)), Date, 0, Amount, Id, '' as RawTitle, '' as RawDesc FROM hasanaat_payments WHERE Date BETWEEN '$start' AND '$end'
         UNION ALL
         SELECT 'General Income', CONCAT(Title, ' - ', IFNULL(Description, '')), Date, Amount, 0, Id, Title as RawTitle, Description as RawDesc FROM general_income WHERE Date BETWEEN '$start' AND '$end'
         UNION ALL
         SELECT 'Tabarruk', CONCAT(item_name, ' - ', IFNULL(description, '')), date, 0, total_cost, id, item_name as RawTitle, description as RawDesc FROM tabarruk WHERE date BETWEEN '$start' AND '$end'
         UNION ALL
         SELECT 'Expense', CONCAT(Title, ' - ', IFNULL(Description, '')), Date, 0, Amount, Id, Title as RawTitle, Description as RawDesc FROM general_expenses WHERE Date BETWEEN '$start' AND '$end'
+        UNION ALL
+        SELECT 'Prize Distribution', CONCAT('Student ID: ', student_id, ' - ', prize_name), date, 0, cost, id, prize_name as RawTitle, reason as RawDesc FROM prizes WHERE cost > 0 AND date BETWEEN '$start' AND '$end'
+        UNION ALL
+        SELECT 'Exam Payout', CONCAT('Enr ID: ', er.enrollment_id, ' - ', ex.name), ex.date, 0, er.calculated_payout, er.id, ex.name as RawTitle, 'Exam Reward' as RawDesc FROM exam_results er JOIN exams ex ON er.exam_id = ex.id WHERE er.calculated_payout > 0 AND ex.date BETWEEN '$start' AND '$end'
+        UNION ALL
+        SELECT 'Daily Game', CONCAT('Enr ID: ', enrollment_id, ' - Pos: ', position), date, 0, reward_amount, id, 'Round Table Game' as RawTitle, 'Game Reward' as RawDesc FROM round_table_records WHERE reward_amount > 0 AND date BETWEEN '$start' AND '$end'
+        UNION ALL
+        SELECT 'Activity Cash', CONCAT('Enr ID: ', enrollment_id), date, 0, qty, id, 'Daily Activity' as RawTitle, 'Direct Cash' as RawDesc FROM activities_records WHERE reward_type = 'Cash' AND qty > 0 AND date BETWEEN '$start' AND '$end'
         ORDER BY Date DESC
     ";
+
                             $ledger = $pdo->query($sql)->fetchAll();
                             ?>
 
@@ -4957,8 +5188,8 @@ function editExpense(d) {
                                 <div class="card-body">
                                     <table id="hasanaatCardsTable" class="table table-hover datatable-basic">
                                         <thead>
-                                            <tr>
-                                                <th>Card #</th>
+    <tr>
+        <th>No. of Cards</th>
                                                 <th>Holder</th>
                                                 <th>Type</th>
                                                 <th>Total Value (Rs)</th>
@@ -4970,8 +5201,8 @@ function editExpense(d) {
                                         </thead>
                                         <tfoot>
                                             <tr>
-                                                <th><input type="text" class="form-control form-control-sm" placeholder="Card #"></th>
-                                                <th><input type="text" class="form-control form-control-sm" placeholder="Holder"></th>
+                                                <th><input type="text" class="form-control form-control-sm" placeholder="Cards Qty"></th>
+<th><input type="text" class="form-control form-control-sm" placeholder="Holder"></th>
                                                 <th><input type="text" class="form-control form-control-sm" placeholder="Type"></th>
                                                 <th><input type="text" class="form-control form-control-sm" placeholder="Total"></th>
                                                 <th><input type="text" class="form-control form-control-sm" placeholder="Redeemed"></th>
@@ -4998,11 +5229,9 @@ function editExpense(d) {
                                                     <td><span
                                                             class="badge bg-<?= $statusColor ?>"><?= $bal <= 0 ? 'Completed' : 'Active' ?></span>
                                                     </td>
-                                                    <td>
-                                                        <?php if (can('hasanaat_pay')): ?>
-                                                            <button class="btn btn-xs btn-outline-danger"
-                                                                onclick="openPay(<?= $c['Id'] ?>, '<?= $c['CardNumber'] ?>')">Redeem Cash</button>
-                                                        <?php endif; ?>
+                                                    <td class="fw-bold"><?= $c['NumberOfCards'] ?></td>
+<button class="btn btn-xs btn-outline-danger" onclick="openPay(<?= $c['Id'] ?>, '<?= $c['NumberOfCards'] ?>')">Redeem Cash</button>
+
                                                         <?php if (can('hasanaat_edit')): ?>
                                                             <button class="btn btn-xs btn-info"
                                                                 onclick='editCard(<?= json_encode($c) ?>)'>Edit</button>
@@ -5033,8 +5262,8 @@ function editExpense(d) {
                                             <input type="hidden" name="action" value="save_card">
                                             <input type="hidden" name="card_id" id="hc_id">
                                             <div class="row">
-                                                <div class="col-6 mb-2"><label>Card No</label><input type="text" name="card_no"
-                                                        id="hc_no" class="form-control" required></div>
+                                                <div class="col-6 mb-2"><label>Number of Cards</label><input type="number" name="num_cards" id="hc_no" class="form-control" required value="1" min="1"></div>
+
                                                 <div class="col-6 mb-2"><label>Type</label>
                                                     <select name="type" id="hc_type" class="form-select">
                                                         <?= getOptions('opt_card_types') ?>
@@ -5087,7 +5316,7 @@ function editExpense(d) {
                             <script>
                                 function editCard(d) {
                                     document.getElementById('hc_id').value = d.Id || '';
-                                    document.getElementById('hc_no').value = d.CardNumber || '';
+                                    document.getElementById('hc_no').value = d.NumberOfCards || '1';
                                     document.getElementById('hc_holder').value = d.HolderName || '';
                                     document.getElementById('hc_father').value = d.FatherName || '';
                                     document.getElementById('hc_amt').value = d.TotalAmount || '';
@@ -5098,8 +5327,8 @@ function editExpense(d) {
                                 }
                                 function openPay(id, no) {
                                     document.getElementById('hp_card_id').value = id;
-                                    document.getElementById('hp_card_display').innerText = "Card Number: " + no;
-                                    new bootstrap.Modal(document.getElementById('payModal')).show();
+                                    document.getElementById('hp_card_display').innerText = "Cards Count: " + no;
+new bootstrap.Modal(document.getElementById('payModal')).show();
                                 }
                             </script>
                         <?php endif; ?>
@@ -5411,23 +5640,25 @@ const cutoffDay = <?= getSet('cutoff_day') ?: '31' ?>;
 
                                             <ul class="list-group list-group-flush">
 
-                                                <li class="list-group-item d-flex justify-content-between"><span>Boys
-                                                        (Active)</span> <span class="badge bg-primary rounded-pill">
-                                                        <?php echo $pdo->query("SELECT COUNT(DISTINCT s.Id) FROM students s JOIN enrollment e ON s.Id=e.StudentId WHERE s.Gender='Male' AND e.IsActive=1")->fetchColumn(); ?>
-                                                    </span>
-                                                </li>
+    <li class="list-group-item d-flex justify-content-between"><span>Boys (Active)</span> 
+        <span class="badge bg-primary rounded-pill">
+            <?php echo $pdo->query("SELECT COUNT(DISTINCT s.Id) FROM students s JOIN enrollment e ON s.Id=e.StudentId JOIN enrollmentsession es ON e.EnrollmentSessionId = es.Id WHERE s.Gender='Male' AND e.IsActive=1 AND es.IsActive=1")->fetchColumn(); ?>
+        </span>
+    </li>
 
-                                                <li class="list-group-item d-flex justify-content-between"><span>Girls
-                                                        (Active)</span> <span class="badge bg-danger rounded-pill">
-                                                        <?php echo $pdo->query("SELECT COUNT(DISTINCT s.Id) FROM students s JOIN enrollment e ON s.Id=e.StudentId WHERE s.Gender='Female' AND e.IsActive=1")->fetchColumn(); ?>
-                                                    </span>
-                                                </li>
-                                                <li class="list-group-item d-flex justify-content-between"><span>Teachers</span>
-                                                    <span
-                                                        class="badge bg-success rounded-pill"><?php echo $pdo->query("SELECT COUNT(*) FROM teachers")->fetchColumn(); ?></span>
-                                                </li>
+    <li class="list-group-item d-flex justify-content-between"><span>Girls (Active)</span> 
+        <span class="badge bg-danger rounded-pill">
+            <?php echo $pdo->query("SELECT COUNT(DISTINCT s.Id) FROM students s JOIN enrollment e ON s.Id=e.StudentId JOIN enrollmentsession es ON e.EnrollmentSessionId = es.Id WHERE s.Gender='Female' AND e.IsActive=1 AND es.IsActive=1")->fetchColumn(); ?>
+        </span>
+    </li>
 
-                                            </ul>
+    <li class="list-group-item d-flex justify-content-between"><span>Teachers (Active)</span>
+        <span class="badge bg-success rounded-pill">
+            <?php echo $pdo->query("SELECT COUNT(DISTINCT t.id) FROM teachers t JOIN teacher_sessions ts ON t.id = ts.teacher_id JOIN enrollmentsession s ON ts.session_id = s.Id WHERE s.IsActive = 1")->fetchColumn(); ?>
+        </span>
+    </li>
+
+</ul>
 
                                         </div>
                                     </div>
@@ -5524,7 +5755,15 @@ const cutoffDay = <?= getSet('cutoff_day') ?: '31' ?>;
                                                     <input type="text" name="password" class="form-control" required
                                                         placeholder="Enter custom password">
                                                 </div>
-
+<div class="mb-2">
+    <label class="fw-bold text-primary">Assign Sessions (Required)</label>
+    <select name="assigned_sessions[]" class="form-select border-primary" multiple size="3" required>
+        <?php 
+        $allSess = $pdo->query("SELECT Id, Name FROM enrollmentsession ORDER BY Id DESC")->fetchAll();
+        foreach ($allSess as $s) echo "<option value='{$s['Id']}'>{$s['Name']}</option>"; 
+        ?>
+    </select>
+</div>
                                                 <div class="mb-2">
                                                     <label>Assign Classes (Optional)</label>
                                                     <select name="assigned_classes[]" class="form-select" multiple size="4">
@@ -5576,6 +5815,7 @@ const cutoffDay = <?= getSet('cutoff_day') ?: '31' ?>;
                                                         <tr>
                                                             <th>ID</th>
                                                             <th>Name</th>
+                                                            <th>Assigned Sessions</th>
                                                             <th>Assigned Classes</th>
                                                             <th>Phone</th>
                                                             <th>Action</th>
@@ -5585,14 +5825,18 @@ const cutoffDay = <?= getSet('cutoff_day') ?: '31' ?>;
                                                         <?php
                                                         // UPDATED QUERY: Added 'DISTINCT' to prevent duplicate class names
                                                         $sql = "SELECT t.*, 
-                   GROUP_CONCAT(DISTINCT cm.ClassName SEPARATOR ', ') as AssignedClasses
-            FROM teachers t
-            JOIN users u ON t.user_id = u.id
-            LEFT JOIN class_teachers ct ON t.user_id = ct.user_id
-            LEFT JOIN classmanifest cm ON ct.class_id = cm.Class
-            WHERE u.role = 'teacher'
-            GROUP BY t.id
-            ORDER BY t.name";
+        GROUP_CONCAT(DISTINCT cm.ClassName SEPARATOR ', ') as AssignedClasses,
+        GROUP_CONCAT(DISTINCT ts.session_id) as SessionIds,
+        GROUP_CONCAT(DISTINCT es.Name SEPARATOR ', ') as AssignedSessions
+        FROM teachers t
+        JOIN users u ON t.user_id = u.id
+        LEFT JOIN class_teachers ct ON t.user_id = ct.user_id
+        LEFT JOIN classmanifest cm ON ct.class_id = cm.Class
+        LEFT JOIN teacher_sessions ts ON t.id = ts.teacher_id
+        LEFT JOIN enrollmentsession es ON ts.session_id = es.Id
+        WHERE u.role = 'teacher'
+        GROUP BY t.id
+        ORDER BY t.name";
 
                                                         $t = $pdo->query($sql);
                                                         while ($r = $t->fetch()): ?>
@@ -5603,6 +5847,8 @@ const cutoffDay = <?= getSet('cutoff_day') ?: '31' ?>;
                                                                     <small
                                                                         class="text-muted"><?php echo htmlspecialchars($r['gender']); ?></small>
                                                                 </td>
+                                                                <td>
+                                                                <?php echo htmlspecialchars($r['AssignedSessions']); ?></td>
                                                                 <td>
                                                                     <?php if (!empty($r['AssignedClasses'])): ?>
                                                                         <span class="badge bg-success"
@@ -5669,6 +5915,12 @@ const cutoffDay = <?= getSet('cutoff_day') ?: '31' ?>;
                                                         id="et_phone" class="form-control"></div>
                                                 <div class="mb-2"><label>Notes</label><textarea name="notes" id="et_notes"
                                                         class="form-control"></textarea></div>
+                                                        <div class="mb-2">
+    <label class="fw-bold text-info">Assign Sessions</label>
+    <select name="assigned_sessions[]" id="et_sessions" class="form-select border-info" multiple size="3" required>
+        <?php foreach ($allSess as $s) echo "<option value='{$s['Id']}'>{$s['Name']}</option>"; ?>
+    </select>
+</div>
                                                 <div class="alert alert-info small">To change assigned classes, please use the
                                                     "Classes" tab or the "Unassign" button in the list.</div>
                                             </div>
@@ -5679,6 +5931,16 @@ const cutoffDay = <?= getSet('cutoff_day') ?: '31' ?>;
 
                                 <script>
                                     function editTeacher(d) {
+                                        var selectSess = document.getElementById('et_sessions');
+if (selectSess) {
+    for (var i = 0; i < selectSess.options.length; i++) selectSess.options[i].selected = false;
+    if (d.SessionIds) {
+        var ids = String(d.SessionIds).split(',');
+        for (var i = 0; i < selectSess.options.length; i++) {
+            if (ids.includes(selectSess.options[i].value)) selectSess.options[i].selected = true;
+        }
+    }
+}
                                         document.getElementById('et_id').value = d.id;
                                         document.getElementById('et_name').value = d.name;
                                         document.getElementById('et_gender').value = d.gender;
@@ -6025,70 +6287,753 @@ const cutoffDay = <?= getSet('cutoff_day') ?: '31' ?>;
 
                         <?php endif; ?>
 
-
-
-                        <?php if ($page === 'age_calculator'): ?>
-
-                            <div class="card" style="max-width: 600px; margin: auto;">
-
-                                <div class="card-header bg-primary text-white">Class Age Calculator<br><small>(Calculate age as of <?= date('jS F', strtotime('2024-'.(getSet('cutoff_month')?:'05').'-'.(getSet('cutoff_day')?:'31'))) ?> of the current year)</small></div>
-
-                                <div class="card-body">
-
-                                    <div class="mb-3"><label>DOB</label><input type="date" id="page_calc_dob"
-                                            class="form-control" onchange="pageCalculateClass()"></div>
-
-                                    <div class="mb-3"><label>Gender</label><select id="page_calc_gender" class="form-select"
-                                            onchange="pageCalculateClass()">
-                                            <option value="Male">Boy</option>
-                                            <option value="Female">Girl</option>
-                                        </select></div>
-
-                                    <div class="alert alert-info text-center" id="page_calc_result">Enter DOB to see suggested
-                                        class.</div>
-
-                                </div>
-
-                            </div>
-
-                            <?php $jsClasses = $pdo->query("SELECT c.ClassName, c.EnrollmentType, c.MinAge, c.MaxAge FROM classmanifest c JOIN enrollmentsession s ON c.session_id = s.Id WHERE s.IsActive = 1")->fetchAll(); ?>
-
-                            <script>
-
-                                const pClasses = <?php echo json_encode($jsClasses); ?>;
-
-                                function pageCalculateClass() {
-
-                                    const dobStr = document.getElementById('page_calc_dob').value;
-
-                                    if (!dobStr) return;
-
-                                    const dob = new Date(dobStr);
-const cutoffDay = <?= getSet('cutoff_day') ?: '31' ?>;
-                                            const cutoffMonth = <?= (getSet('cutoff_month') ?: '05') ?> - 1; // JS months 0-11
-                                            const currentYear = new Date().getFullYear();
-                                            const targetDate = new Date(currentYear, cutoffMonth, cutoffDay);
-                                    let age = targetDate.getFullYear() - dob.getFullYear();
-                                    const m = targetDate.getMonth() - dob.getMonth();
-                                    if (m < 0 || (m === 0 && targetDate.getDate() < dob.getDate())) {
-                                        age--;
-                                    }
-
-                                    const gender = document.getElementById('page_calc_gender').value;
-
-                                    const type = (gender === 'Male') ? 'BoysClass' : 'GirlsClass';
-
-                                    let match = "No class found for Age " + age;
-
-                                    for (let c of pClasses) { if (c.EnrollmentType === type && age >= c.MinAge && age <= c.MaxAge) { match = "Recommended: <strong>" + c.ClassName + "</strong> (Age " + age + ")"; break; } }
-
-                                    document.getElementById('page_calc_result').innerHTML = match;
-
+<?php if ($page === 'monthly_fees'): ?>
+    <?php
+    // Session, Month, Year, aur Class fetch karna
+    $selectedSession = $_GET['session_id'] ?? ($activeSessions[0]['Id'] ?? '');
+    $selectedMonth = $_GET['m'] ?? date('n');
+    $selectedYear = $_GET['y'] ?? date('Y');
+    $selectedClass = $_GET['class_id'] ?? '';
+    
+    // Classes List (Jo Active Session mein ho)
+    $classes = $pdo->prepare("SELECT c.Class, c.ClassName, c.EnrollmentType FROM classmanifest c JOIN enrollmentsession s ON c.session_id = s.Id WHERE s.IsActive = 1 AND s.Id = ? GROUP BY c.Class ORDER BY c.EnrollmentType, c.ClassName");
+    $classes->execute([$selectedSession]);
+    $classes = $classes->fetchAll();
+    ?>
+    <div class="card shadow-sm border-0 mb-4 rounded-4">
+        <div class="card-header bg-gradient bg-primary text-white d-flex justify-content-between align-items-center py-3 border-bottom">
+            <h5 class="mb-0 fw-bold"><i class="fas fa-calendar-check me-2"></i> Monthly Fees Management</h5>
+        </div>
+        <div class="card-body bg-white">
+<div class="row g-2 bg-light p-3 rounded-4 mb-4 border">
+                <div class="col-md-8">
+                    <form method="GET" class="row g-2 m-0 h-100 align-items-end">
+                        <input type="hidden" name="page" value="monthly_fees">
+                        <div class="col-md-3">
+                            <label class="fw-bold small text-secondary">Session</label>
+                            <select name="session_id" class="form-select form-select-sm border-primary" onchange="this.form.submit()">
+                                <?php foreach ($activeSessions as $s): ?>
+                                    <option value="<?= $s['Id'] ?>" <?= $selectedSession == $s['Id'] ? 'selected' : '' ?>><?= $s['Name'] ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="fw-bold small text-secondary">Month</label>
+                            <select name="m" class="form-select form-select-sm border-primary" onchange="this.form.submit()">
+                                <?php
+                                for ($m=1; $m<=12; $m++) {
+                                    $monthName = date('F', mktime(0, 0, 0, $m, 1));
+                                    $sel = ($m == $selectedMonth) ? 'selected' : '';
+                                    echo "<option value='$m' $sel>$monthName</option>";
                                 }
+                                ?>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="fw-bold small text-secondary">Year</label>
+                            <select name="y" class="form-select form-select-sm border-primary" onchange="this.form.submit()">
+                                <?php
+                                $currY = date('Y');
+                                for ($y = $currY - 2; $y <= $currY + 1; $y++) {
+                                    $sel = ($y == $selectedYear) ? 'selected' : '';
+                                    echo "<option value='$y' $sel>$y</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="fw-bold small text-secondary">Filter by Class</label>
+                            <select name="class_id" class="form-select form-select-sm border-primary" onchange="this.form.submit()">
+                                <option value="">-- All Classes --</option>
+                                <?php foreach ($classes as $c): ?>
+                                    <option value="<?= $c['Class'] ?>" <?= $selectedClass == $c['Class'] ? 'selected' : '' ?>><?= ($c['EnrollmentType'] == 'BoysClass' ? '[B] ' : '[G] ') . $c['ClassName'] ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </form>
+                </div>
 
-                            </script>
+                <div class="col-md-4">
+                    <div class="d-flex flex-column gap-2 h-100 justify-content-end">
+                        <form method="POST" onsubmit="return confirm('Generate fees for active students in selected Session and Month?');" class="m-0 d-flex gap-2 align-items-end">
+                            <input type="hidden" name="action" value="generate_monthly_fees">
+                            <input type="hidden" name="session_id" value="<?= $selectedSession ?>">
+                            <input type="hidden" name="month" value="<?= $selectedMonth ?>">
+                            <input type="hidden" name="year" value="<?= $selectedYear ?>">
+                            <input type="hidden" name="class_id" value="<?= $selectedClass ?>">
+                            
+                            <div style="flex: 1;">
+                                <label class="fw-bold small text-secondary">Set Fee (Rs)</label>
+                                <input type="number" name="custom_amount" class="form-control form-control-sm border-warning" placeholder="Default">
+                            </div>
+                            <div style="flex: 1;">
+                                <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold shadow-sm">
+                                    <i class="fas fa-magic me-1"></i> Generate
+                                </button>
+                            </div>
+                        </form>
 
-                        <?php endif; ?>
+                        <form method="POST" onsubmit="return confirm('⚠️ WARNING: Yeh is mahine ki tamaam UNPAID fees delete kar dega. Kya aap sure hain?');" class="m-0">
+                            <input type="hidden" name="action" value="bulk_delete_monthly_fees">
+                            <input type="hidden" name="session_id" value="<?= $selectedSession ?>">
+                            <input type="hidden" name="month" value="<?= $selectedMonth ?>">
+                            <input type="hidden" name="year" value="<?= $selectedYear ?>">
+                            <input type="hidden" name="class_id" value="<?= $selectedClass ?>">
+                            <button type="submit" class="btn btn-outline-danger w-100 btn-sm fw-bold shadow-sm">
+                                <i class="fas fa-trash-alt me-1"></i> Bulk Delete Unpaid
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table id="monthlyFeesTable" class="table table-hover table-bordered align-middle w-100">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Enr ID</th>
+                            <th>Student</th>
+                            <th>Class</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Collected By</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editMonthlyModal">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <form method="POST" class="modal-content border-info shadow-lg">
+                <div class="modal-header bg-info text-dark">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i> Edit Fee Amount</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <input type="hidden" name="action" value="edit_monthly_fee">
+                    <input type="hidden" name="fee_id" id="em_fee_id">
+                    
+                    <div class="text-center mb-3">
+                        <h6 id="em_student_name" class="fw-bold text-dark fs-6 mb-1"></h6>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="fw-bold small text-secondary">New Amount (Rs.)</label>
+                        <input type="number" name="amount" id="em_amount" class="form-control form-control-lg text-center fw-bold text-info border-info" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light justify-content-center">
+                    <button type="submit" class="btn btn-info fw-bold w-100"><i class="fas fa-save me-1"></i> Update Amount</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade" id="payMonthlyModal">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <form method="POST" class="modal-content border-success shadow-lg">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-hand-holding-usd me-2"></i> Receive Fee</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <input type="hidden" name="action" value="pay_monthly_fee">
+                    <input type="hidden" name="month" value="<?= $selectedMonth ?>">
+                    <input type="hidden" name="year" value="<?= $selectedYear ?>">
+                    <input type="hidden" name="fee_id" id="pm_fee_id">
+                    <input type="hidden" name="enr_id" id="pm_enr_id">
+                    
+                    <div class="text-center mb-3">
+                        <h6 id="pm_student_name" class="fw-bold text-dark fs-5 mb-1"></h6>
+                        <span class="badge bg-primary text-white p-2"><?= date('F', mktime(0,0,0,$selectedMonth,1)) ?> <?= $selectedYear ?></span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="fw-bold small text-secondary">Amount to Receive (Rs.)</label>
+                        <input type="number" name="amount" id="pm_amount" class="form-control form-control-lg text-center fw-bold text-success border-success" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light justify-content-center">
+                    <button type="submit" class="btn btn-success fw-bold w-100"><i class="fas fa-check-circle me-1"></i> Confirm Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openPayMonthlyModal(data) {
+            document.getElementById('pm_enr_id').value = data.enr_id;
+            document.getElementById('pm_fee_id').value = data.fee_id || '';
+            document.getElementById('pm_amount').value = data.amount;
+            document.getElementById('pm_student_name').innerHTML = data.name;
+            new bootstrap.Modal(document.getElementById('payMonthlyModal')).show();
+        }
+
+        function openEditMonthlyModal(data) {
+            document.getElementById('em_fee_id').value = data.fee_id;
+            document.getElementById('em_amount').value = data.amount;
+            document.getElementById('em_student_name').innerHTML = data.name;
+            new bootstrap.Modal(document.getElementById('editMonthlyModal')).show();
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            $('#monthlyFeesTable').DataTable({
+                ajax: {
+                    url: '?action=fetch_monthly_fees&session_id=<?= $selectedSession ?>&month=<?= $selectedMonth ?>&year=<?= $selectedYear ?>&class_id=<?= $selectedClass ?>',
+                    type: 'GET'
+                },
+                dom: 'Blfrtip',
+                buttons: ['excel', 'print'],
+                pageLength: 50,
+                ordering: false,
+                language: {
+                    emptyTable: "No fees generated for this criteria. Click 'Bulk Generate' above."
+                }
+            });
+        });
+    </script>
+<?php endif; ?>
+
+<?php if ($page === 'staff_timesheet' && can('manage_salaries')): ?>
+    <?php $selectedDate = $_GET['date'] ?? date('Y-m-d');
+    $dayOfWeek = date('w', strtotime($selectedDate));
+    if ($dayOfWeek == 6) { // Saturday
+        $default_in = '15:00:00';
+        $default_out = '16:45:00';
+        $dayLabel = "<span class='badge bg-warning text-dark ms-2'>Saturday (1.75 Hrs)</span>";
+    } elseif ($dayOfWeek == 0) { // Sunday
+        $default_in = '';
+        $default_out = '';
+        $dayLabel = "<span class='badge bg-danger ms-2'>Sunday (Off Day)</span>";
+    } else { // Monday to Friday
+        $default_in = '15:00:00';
+        $default_out = '18:00:00';
+        $dayLabel = "<span class='badge bg-info text-dark ms-2'>" . date('l', strtotime($selectedDate)) . " (3 Hrs)</span>";
+    }
+    ?>
+    
+    <div class="card shadow-sm border-0 mb-4 rounded-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
+            <h5 class="mb-0 fw-bold"><i class="fas fa-clock me-2"></i> Daily Staff Timesheet <?= $dayLabel ?></h5>
+            <form method="GET" class="d-flex align-items-center m-0">
+                <input type="hidden" name="page" value="staff_timesheet">
+                <label class="text-white me-2 fw-bold">Date:</label>
+                <input type="date" name="date" class="form-control form-control-sm border-0" value="<?= $selectedDate ?>" onchange="this.form.submit()">
+            </form>
+        </div>
+        <div class="card-body bg-light">
+            <form method="POST">
+                <input type="hidden" name="action" value="save_staff_attendance">
+                <input type="hidden" name="date" value="<?= $selectedDate ?>">
+                
+                <div class="table-responsive bg-white shadow-sm rounded border">
+                    <table class="table table-hover align-middle mb-0">
+    <thead class="table-dark">
+        <tr>
+            <th>Teacher Name</th>
+            <th style="width: 130px;">Time In</th>
+            <th style="width: 130px;">Time Out</th>
+            <th style="width: 160px;">Duty Type</th>
+            <th style="width: 160px;">Status</th>
+            <th style="width: 100px;" class="text-center">Calc. Hrs</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php 
+        $activeTeachersSql = "SELECT DISTINCT t.id, t.name, t.base_salary 
+                      FROM teachers t 
+                      JOIN teacher_sessions ts ON t.id = ts.teacher_id 
+                      JOIN enrollmentsession s ON ts.session_id = s.Id 
+                      WHERE s.IsActive = 1 
+                      ORDER BY t.name";
+$teachers = $pdo->query($activeTeachersSql)->fetchAll();
+        foreach($teachers as $t): 
+            $tsQ = $pdo->prepare("SELECT * FROM staff_timesheets WHERE teacher_id=? AND date=?");
+            $tsQ->execute([$t['id'], $selectedDate]);
+            $ts = $tsQ->fetch();
+            
+            $status = $ts['status'] ?? ($dayOfWeek == 0 ? 'Absent' : 'On Time');
+            $duty_type = $ts['duty_type'] ?? 'Working Hour';
+            $time_in = $ts['time_in'] ?? $default_in;
+            $time_out = $ts['time_out'] ?? $default_out;
+        ?>
+        <tr>
+            <td class="fw-bold"><?= $t['name'] ?></td>
+            <td><input type="time" step="1" name="attendance[<?= $t['id'] ?>][time_in]" class="form-control form-control-sm" value="<?= $time_in ?>"></td>
+            <td><input type="time" step="1" name="attendance[<?= $t['id'] ?>][time_out]" class="form-control form-control-sm" value="<?= $time_out ?>"></td>
+            <td>
+                <select name="attendance[<?= $t['id'] ?>][duty_type]" class="form-select form-select-sm border-info">
+                    <option value="Working Hour" <?= $duty_type == 'Working Hour' ? 'selected' : '' ?>>Working Hour</option>
+                    <option value="Extra Duty" <?= $duty_type == 'Extra Duty' ? 'selected' : '' ?>>Extra Duty</option>
+                    <option value="Without Working Hour" <?= $duty_type == 'Without Working Hour' ? 'selected' : '' ?>>Without Working Hour</option>
+                </select>
+            </td>
+            <td>
+                <select name="attendance[<?= $t['id'] ?>][status]" class="form-select form-select-sm <?= $status == 'Absent' || $status == 'Forgot to Punch' ? 'border-danger text-danger fw-bold' : 'border-success text-success' ?>">
+                    <option value="On Time" <?= $status == 'On Time' ? 'selected' : '' ?>>On Time</option>
+                    <option value="Late" <?= $status == 'Late' ? 'selected' : '' ?>>Late</option>
+                    <option value="Compensation" <?= $status == 'Compensation' ? 'selected' : '' ?>>Compensation</option>
+                    <option value="Forgot to Punch" <?= $status == 'Forgot to Punch' ? 'selected' : '' ?>>Forgot to Punch</option>
+                    <option value="Absent" <?= $status == 'Absent' ? 'selected' : '' ?>>Absent</option>
+                    <option value="Holiday" <?= $status == 'Holiday' ? 'selected' : '' ?>>Official Holiday (Paid)</option>
+                </select>
+            </td>
+            <td class="text-center fw-bold text-primary bg-light">
+                <?= $ts['worked_hours'] ?? '0.00' ?>
+            </td>
+        </tr>
+        <?php endforeach; ?>
+    </tbody>
+</table>
+                </div>
+                <div class="mt-4 text-end">
+                    <button type="submit" class="btn btn-primary fw-bold px-5 shadow"><i class="fas fa-save me-2"></i> Save Timesheets & Compute Hours</button>
+                </div>
+            </form>
+        </div>
+    </div>
+<?php endif; ?>
+
+<?php if ($page === 'staff_salary' && can('manage_salaries')): ?>
+    <?php
+    $selectedMonth = $_GET['m'] ?? date('n');
+    $selectedYear = $_GET['y'] ?? date('Y');
+    ?>
+    <div class="card shadow-sm border-0 mb-4 rounded-4">
+        <div class="card-header bg-gradient bg-dark text-white d-flex justify-content-between align-items-center py-3 border-bottom">
+            <h5 class="mb-0 fw-bold"><i class="fas fa-file-invoice-dollar me-2"></i> Staff Monthly Salary Dashboard</h5>
+        </div>
+        <div class="card-body bg-white">
+            <div class="row g-2 bg-light p-3 rounded-4 mb-4 border align-items-end">
+                <div class="col-md-6">
+                    <form method="GET" class="row g-2 m-0 h-100 align-items-end">
+                        <input type="hidden" name="page" value="staff_salary">
+                        <div class="col-md-6">
+                            <label class="fw-bold small text-secondary">Month</label>
+                            <select name="m" class="form-select border-dark" onchange="this.form.submit()">
+                                <?php
+                                for ($m=1; $m<=12; $m++) {
+                                    $monthName = date('F', mktime(0, 0, 0, $m, 1));
+                                    echo "<option value='$m' ".($m == $selectedMonth ? 'selected' : '').">$monthName</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-bold small text-secondary">Year</label>
+                            <select name="y" class="form-select border-dark" onchange="this.form.submit()">
+                                <?php for ($y = date('Y') - 2; $y <= date('Y') + 1; $y++) {
+                                    echo "<option value='$y' ".($y == $selectedYear ? 'selected' : '').">$y</option>";
+                                } ?>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-6 text-end">
+                    <form method="POST" onsubmit="return confirm('Generate base salary sheets for all teachers for this month?');">
+                        <input type="hidden" name="action" value="generate_salaries">
+                        <input type="hidden" name="month" value="<?= $selectedMonth ?>">
+                        <input type="hidden" name="year" value="<?= $selectedYear ?>">
+                        <button type="submit" class="btn btn-dark fw-bold shadow-sm">
+                            <i class="fas fa-magic me-1"></i> Generate Month Sheet
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table id="staffSalaryTable" class="table table-hover table-bordered align-middle w-100">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Teacher Name</th>
+                            <th>Total Base Salary</th>
+                            <th>Target Days</th>
+                            <th>Daily Hrs</th>
+                            <th>Hrs Worked</th>
+                            <th>G. Total Payable</th>
+                            <th>Status</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="salaryCalcModal" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg">
+            <form method="POST" class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-calculator me-2"></i> Salary Calculator - <span id="sc_name" class="text-warning"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <input type="hidden" name="action" value="save_salary_details">
+                    <input type="hidden" name="salary_id" id="sc_id">
+                    
+                    <div class="row g-3">
+                        <div class="col-md-12 mb-2 border-bottom pb-2"><h6 class="fw-bold text-primary">1. Base Structure</h6></div>
+                        <div class="col-md-4">
+                            <label class="small fw-bold text-muted">Total Salary (Base)</label>
+                            <input type="number" step="0.01" name="t_salary" id="sc_t_salary" class="form-control fw-bold" oninput="calculateSalary()">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small fw-bold text-muted">Target W. Days</label>
+                            <input type="number" name="t_w_days" id="sc_t_w_days" class="form-control" oninput="calculateSalary()">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small fw-bold text-muted">Daily W. Hours</label>
+                            <input type="number" step="0.01" name="d_w_hours" id="sc_d_w_hours" class="form-control" oninput="calculateSalary()">
+                        </div>
+
+                        <div class="col-md-12 mb-2 border-bottom pb-2 mt-4"><h6 class="fw-bold text-primary">2. Attendance & Allowances</h6></div>
+                        <div class="col-md-3">
+                            <label class="small fw-bold text-dark">Actual Hours Worked</label>
+                            <input type="number" step="0.01" name="h_worked" id="sc_h_worked" class="form-control border-dark" oninput="calculateSalary()">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small fw-bold text-muted">Bonus</label>
+                            <input type="number" step="0.01" name="aabtaab_salary" id="sc_aabtaab" class="form-control text-success" oninput="calculateSalary()">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small fw-bold text-muted">Other Amount</label>
+                            <input type="number" step="0.01" name="dq_salary" id="sc_dq" class="form-control text-success" oninput="calculateSalary()">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small fw-bold text-primary">Ulama Classes (Count)</label>
+                            <input type="number" name="ulma_class_count" id="sc_ulma_count" class="form-control border-primary" oninput="calculateSalary()" placeholder="e.g. 2, 4">
+                        </div>
+
+                        <div class="col-md-12 mb-2 border-bottom pb-2 mt-4"><h6 class="fw-bold text-danger">3. Auto Calculations (Read-Only)</h6></div>
+                        <div class="col-md-3">
+                            <label class="small fw-bold text-success">Ulama Amount (Rs)</label>
+                            <input type="text" name="ulma_classes" id="sc_ulma" class="form-control bg-white text-success fw-bold" readonly>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small fw-bold text-muted">Total Target Hrs</label>
+                            <input type="text" name="t_w_hours" id="sc_t_w_hours" class="form-control bg-white" readonly>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small fw-bold text-muted">Salary @ Hour</label>
+                            <input type="text" name="salary_per_hour" id="sc_per_hour" class="form-control bg-white text-danger" readonly>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small fw-bold text-muted">Base Payable</label>
+                            <input type="text" name="salary_payable" id="sc_payable" class="form-control bg-white" readonly>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small fw-bold text-dark">GRAND TOTAL (Rs)</label>
+                            <input type="text" name="g_total" id="sc_g_total" class="form-control bg-warning fw-bold fs-5" readonly>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-dark fw-bold px-4"><i class="fas fa-save"></i> Save Calculations</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<div class="modal fade" id="timesheetDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-file-excel me-2 text-success"></i> Monthly Timesheet Record - <span id="td_name" class="text-warning"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0 bg-light">
+                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-hover table-bordered mb-0 align-middle text-center" style="font-size: 0.9rem;">
+                        <thead class="table-secondary sticky-top">
+                            <tr>
+                                <th>Date</th>
+                                <th>Time In</th>
+                                <th>Time Out</th>
+                                <th>Duty Type</th>
+                                <th>Status</th>
+                                <th>Actually Worked (Hrs)</th>
+<th>Action</th> </tr>
+                        </thead>
+                        <tbody id="td_body" class="bg-white">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-white">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Function to open the Excel-Like popup
+function viewTimesheetDetails(teacherId, month, year, name) {
+    document.getElementById('td_name').innerText = name;
+    
+    $.getJSON(`?action=fetch_teacher_monthly_timesheet&teacher_id=${teacherId}&month=${month}&year=${year}`, function(response) {
+        let html = '';
+        let totalHrs = 0;
+        
+        if (response.data.length === 0) {
+            html = '<tr><td colspan="7" class="py-4 text-muted">No timesheet records found for this month.</td></tr>';
+        } else {
+            response.data.forEach(function(row) {
+                
+                // --- THESE WERE THE MISSING LINES ---
+                let rowClass = row.duty_type === 'Extra Duty' ? 'table-warning' : '';
+                let dutyBadge = row.duty_type === 'Extra Duty' ? `<span class="badge bg-warning text-dark border border-warning"><i class="fas fa-star"></i> Extra Duty</span>` : row.duty_type;
+                
+                let statusColor = 'text-success';
+                if(row.status === 'Absent' || row.status === 'Forgot to Punch') statusColor = 'text-danger fw-bold';
+                else if(row.status === 'Late') statusColor = 'text-warning text-dark fw-bold';
+                else if(row.status === 'Holiday') statusColor = 'text-primary fw-bold';
+                
+                totalHrs += parseFloat(row.worked_hours);
+                // ------------------------------------
+
+                // Build Edit/Delete Actions for each daily log
+                let rowData = JSON.stringify(row).replace(/'/g, "&#39;");
+                let actionBtns = `
+                    <button class="btn btn-xs btn-info py-0" onclick='openSingleTimesheetEditor(${rowData})'><i class="fas fa-pencil-alt"></i></button>
+                    <form method="POST" class="d-inline" onsubmit="return confirm('Delete this day\\'s record?');">
+                        <input type="hidden" name="action" value="delete_timesheet_record">
+                        <input type="hidden" name="ts_id" value="${row.id}">
+                        <button class="btn btn-xs btn-danger py-0"><i class="fas fa-trash"></i></button>
+                    </form>
+                `;
+
+                html += `<tr class="${rowClass}">
+                    <td class="fw-bold text-secondary">${row.date}</td>
+                    <td>${row.time_in || '-'}</td>
+                    <td>${row.time_out || '-'}</td>
+                    <td class="fw-bold">${dutyBadge}</td>
+                    <td class="${statusColor}">${row.status}</td>
+                    <td class="fw-bold text-primary">${row.worked_hours}</td>
+                    <td>${actionBtns}</td> </tr>`;
+            });
+            // Append Total Row
+            html += `<tr class="table-dark">
+                <td colspan="5" class="text-end fw-bold">TOTAL ACTUALLY WORKED:</td>
+                <td class="fw-bold fs-5 text-warning">${totalHrs.toFixed(2)} Hrs</td>
+                <td></td>
+            </tr>`;
+        }
+        
+        document.getElementById('td_body').innerHTML = html;
+        new bootstrap.Modal(document.getElementById('timesheetDetailsModal')).show();
+    });
+}
+</script>
+
+<div class="modal fade" id="editSingleTimesheetModal" style="z-index: 1060;">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <form method="POST" class="modal-content border-info shadow-lg">
+            <div class="modal-header bg-info text-dark">
+                <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i> Edit Record</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <input type="hidden" name="action" value="update_single_timesheet">
+                <input type="hidden" name="ts_id" id="es_ts_id">
+                
+                <div class="mb-2">
+                    <label class="small fw-bold">Time In</label>
+                    <input type="time" step="1" name="time_in" id="es_time_in" class="form-control form-control-sm">
+                </div>
+                <div class="mb-2">
+                    <label class="small fw-bold">Time Out</label>
+                    <input type="time" step="1" name="time_out" id="es_time_out" class="form-control form-control-sm">
+                </div>
+                <div class="mb-2">
+                    <label class="small fw-bold">Duty Type</label>
+                    <select name="duty_type" id="es_duty" class="form-select form-select-sm">
+                        <option value="Working Hour">Working Hour</option>
+                        <option value="Extra Duty">Extra Duty</option>
+                        <option value="Without Working Hour">Without Working Hour</option>
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="small fw-bold">Status</label>
+                    <select name="status" id="es_status" class="form-select form-select-sm">
+                        <option value="On Time">On Time</option>
+                        <option value="Late">Late</option>
+                        <option value="Compensation">Compensation</option>
+                        <option value="Forgot to Punch">Forgot to Punch</option>
+                        <option value="Absent">Absent</option>
+                        <option value="Holiday">Official Holiday (Paid)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer bg-white p-2 justify-content-center">
+                <button type="submit" class="btn btn-info w-100 fw-bold">Update Record</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openSingleTimesheetEditor(data) {
+    document.getElementById('es_ts_id').value = data.id;
+    document.getElementById('es_time_in').value = data.time_in || '';
+    document.getElementById('es_time_out').value = data.time_out || '';
+    document.getElementById('es_duty').value = data.duty_type || 'Working Hour';
+    document.getElementById('es_status').value = data.status || 'On Time';
+    
+    // Hide the large modal temporarily and show the small one
+    var largeModal = bootstrap.Modal.getInstance(document.getElementById('timesheetDetailsModal'));
+    if(largeModal) largeModal.hide();
+    
+    new bootstrap.Modal(document.getElementById('editSingleTimesheetModal')).show();
+}
+</script>
+
+    <div class="modal fade" id="payStaffModal">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <form method="POST" class="modal-content border-success shadow-lg">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-money-bill-wave me-2"></i> Disburse Salary</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center bg-light">
+                    <input type="hidden" name="action" value="pay_staff_salary">
+                    <input type="hidden" name="salary_id" id="pay_id">
+                    <input type="hidden" name="g_total" id="pay_amt_hidden">
+                    
+                    <h6 class="text-muted mb-1">Paying to</h6>
+                    <h5 class="fw-bold text-dark" id="pay_name"></h5>
+                    <hr>
+                    <h6 class="text-muted mb-1">Amount</h6>
+                    <h2 class="text-success fw-bold" id="pay_amt_display"></h2>
+                </div>
+                <div class="modal-footer border-0 justify-content-center bg-light pb-4">
+                    <button type="submit" class="btn btn-success w-100 fw-bold fs-5">Confirm Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+ <script>
+ document.addEventListener("DOMContentLoaded", function() {
+        $('#staffSalaryTable').DataTable({
+            ajax: {
+                url: '?action=fetch_staff_salaries&month=<?= $selectedMonth ?>&year=<?= $selectedYear ?>',
+                type: 'GET'
+            },
+            dom: 'Blfrtip',
+            buttons: [
+                'excel', 
+                {
+                    extend: 'print',
+                    // 1. EXPORT OPTIONS: Only print columns 0 to 5 (Skips Status and Actions)
+                    exportOptions: {
+                        columns: [0, 1, 2, 3, 4, 5] 
+                    },
+                    customize: function (win) {
+                        // Keep window open on cancel
+                        win.close = function() {}; 
+                        
+                        var body = $(win.document.body);
+                        
+                        // 2. ADD CUSTOM HEADER (Institute Name & Session/Month)
+                        var instName = "<?= addslashes(getSet('inst_name')) ?>";
+                        var reportTitle = "Staff Salary Report - <?= date('F Y', mktime(0,0,0,$selectedMonth,1)) ?>";
+                        
+                        // Hide default DataTables title
+                        body.find('h1').hide(); 
+                        
+                        // Prepend our beautiful custom header
+                        body.prepend(
+                            '<div style="text-align:center; margin-bottom: 20px;">' +
+                                '<h2 style="margin:0; text-transform:uppercase; font-weight:900;">' + instName + '</h2>' +
+                                '<h4 style="margin:5px 0; color:#555;">' + reportTitle + '</h4>' +
+                                '<hr style="border-top:2px solid #000;">' +
+                            '</div>'
+                        );
+
+                        // 3. ADD THE SIGNATURE COLUMN
+                        // Add header cell
+                        body.find('table thead tr').append('<th style="text-align:center; width:150px; border: 1px solid #000;">Receiver Signature</th>');
+                        
+                        // Add empty cell with a bottom border line for each row
+                        body.find('table tbody tr').append('<td style="border: 1px solid #000; vertical-align: bottom;"><div style="border-bottom: 1px dashed #999; margin: 15px 5px 5px 5px; height: 15px;"></div></td>');
+
+                        // 4. CLEAN UP STYLING FOR PRINTER
+                        body.css('background', '#ffffff').css('padding', '20px');
+                        body.find('table').addClass('table-bordered').css('font-size', '14px').css('border-collapse', 'collapse').css('width', '100%');
+                        body.find('table th, table td').css('border', '1px solid #000');
+                    }
+                }
+            ],
+            pageLength: 50,
+            ordering: false
+        });
+    });
+
+    function openSalaryEditor(id) {
+        $.getJSON('?action=get_single_salary&id=' + id, function(data) {
+            $('#sc_id').val(data.id);
+            $('#sc_name').text(data.name);
+            
+            $('#sc_t_salary').val(data.t_salary);
+            $('#sc_t_w_days').val(data.t_w_days || 22);
+            $('#sc_d_w_hours').val(data.d_w_hours || 4);
+            $('#sc_h_worked').val(data.h_worked);
+            
+            $('#sc_aabtaab').val(data.aabtaab_salary);
+            $('#sc_dq').val(data.dq_salary);
+            
+            // Load the saved class count
+            $('#sc_ulma_count').val(data.ulma_class_count || 0);
+            
+            calculateSalary(); 
+            new bootstrap.Modal(document.getElementById('salaryCalcModal')).show();
+        });
+    }
+
+    function calculateSalary() {
+        let t_salary = parseFloat($('#sc_t_salary').val()) || 0;
+        let t_w_days = parseFloat($('#sc_t_w_days').val()) || 0;
+        let d_w_hours = parseFloat($('#sc_d_w_hours').val()) || 0;
+        let h_worked = parseFloat($('#sc_h_worked').val()) || 0;
+
+        let aabtaab = parseFloat($('#sc_aabtaab').val()) || 0;
+        let dq = parseFloat($('#sc_dq').val()) || 0;
+        
+        // --- NEW ULMA LOGIC ---
+        let ulma_count = parseInt($('#sc_ulma_count').val()) || 0;
+        let ulma_rate = <?= getSet('ulma_class_rate') ?: 500 ?>; // Pulls from DB Settings
+        let ulma = ulma_count * ulma_rate;
+        $('#sc_ulma').val(ulma.toFixed(2)); // Display the calculated Rs amount
+
+        let t_w_hours = t_w_days * d_w_hours;
+        $('#sc_t_w_hours').val(t_w_hours.toFixed(2));
+
+        let salary_per_hour = t_w_hours > 0 ? (t_salary / t_w_hours) : 0;
+        $('#sc_per_hour').val(salary_per_hour.toFixed(2));
+
+        let salary_payable = salary_per_hour * h_worked;
+        $('#sc_payable').val(salary_payable.toFixed(2));
+
+        let g_total = salary_payable + aabtaab + dq + ulma;
+        $('#sc_g_total').val(Math.round(g_total));
+    }
+
+    function paySalary(id, amt, name) {
+        $('#pay_id').val(id);
+        $('#pay_amt_hidden').val(amt);
+        $('#pay_name').text(name);
+        $('#pay_amt_display').text("Rs. " + parseInt(amt).toLocaleString());
+        new bootstrap.Modal(document.getElementById('payStaffModal')).show();
+    }
+</script>
+<?php endif; ?>
+
 
 
 
@@ -6563,6 +7508,164 @@ const cutoffDay = <?= getSet('cutoff_day') ?: '31' ?>;
 
                             <?php endif; ?>
 
+<?php if ($page === 'schema'): ?>
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold text-primary"><i class="fas fa-project-diagram me-2"></i> Database Schema Architecture</h5>
+            <button class="btn btn-sm btn-outline-primary fw-bold" onclick="toggleSchemaView()">
+                <i class="fas fa-exchange-alt me-1"></i> Toggle View (Diagram / Tables)
+            </button>
+        </div>
+        <div class="card-body bg-light">
+            
+            <div id="schema-diagram-view">
+                <div class="alert alert-info border-info small shadow-sm">
+                    <i class="fas fa-info-circle me-1"></i> <strong>Live ER Diagram:</strong> This visual relationship map is auto-generated using Mermaid.js. It shows how your tables are connected via Foreign Keys and logical IDs.
+                </div>
+                
+                <div class="bg-white p-3 rounded border overflow-auto" style="min-height: 500px;">
+                    <div class="mermaid text-center">
+                        erDiagram
+                        <?php
+                        try {
+                            $tables_res = $pdo->query("SHOW TABLES");
+                            $tables = $tables_res->fetchAll(PDO::FETCH_COLUMN);
+
+                            // Print all table nodes
+                            foreach($tables as $t) {
+                                echo "  $t {\n  }\n";
+                            }
+
+                            // 1. Fetch strict DB Foreign Keys
+                            $fks = $pdo->query("
+                                SELECT TABLE_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
+                                FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+                                WHERE REFERENCED_TABLE_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME IS NOT NULL
+                            ")->fetchAll();
+
+                            $drawnRelationships = [];
+
+                            // Draw strict FKs
+                            foreach ($fks as $fk) {
+                                echo "  {$fk['TABLE_NAME']} }o--|| {$fk['REFERENCED_TABLE_NAME']} : \"{$fk['COLUMN_NAME']}\"\n";
+                                $drawnRelationships[] = $fk['TABLE_NAME'] . $fk['COLUMN_NAME'];
+                            }
+
+                            // 2. Smart Logical Fallback (For tables connected via code logic rather than strict DB constraints)
+                            $logicalRelations = [
+                                ['enrollment', 'StudentId', 'students'],
+                                ['enrollment', 'EnrollmentSessionId', 'enrollmentsession'],
+                                ['enrollment', 'Class', 'classmanifest'],
+                                ['attendance', 'enrollment_id', 'enrollment'],
+                                ['exam_results', 'exam_id', 'exams'],
+                                ['exam_results', 'enrollment_id', 'enrollment'],
+                                ['prizes', 'student_id', 'students'],
+                                ['prizes', 'session_id', 'enrollmentsession'],
+                                ['monthly_fees', 'EnrollmentId', 'enrollment'],
+                                ['staff_monthly_salaries', 'teacher_id', 'teachers'],
+                                ['staff_timesheets', 'teacher_id', 'teachers'],
+                                ['class_teachers', 'user_id', 'users'],
+                                ['class_teachers', 'class_id', 'classmanifest'],
+                                ['teacher_sessions', 'teacher_id', 'teachers'],
+                                ['teacher_sessions', 'session_id', 'enrollmentsession'],
+                                ['activities_records', 'enrollment_id', 'enrollment'],
+                                ['round_table_records', 'enrollment_id', 'enrollment'],
+                                ['certificates', 'student_id', 'students'],
+                                ['hasanaat_payments', 'CardId', 'hasanaat_cards'],
+                                ['teachers', 'user_id', 'users']
+                            ];
+
+                            // Draw logical relations if they weren't already drawn by strict FKs
+                            foreach ($logicalRelations as $rel) {
+                                $key = $rel[0] . $rel[1];
+                                if (!in_array($key, $drawnRelationships) && in_array($rel[0], $tables) && in_array($rel[2], $tables)) {
+                                    echo "  {$rel[0]} }o--|| {$rel[2]} : \"logical: {$rel[1]}\"\n";
+                                }
+                            }
+
+                        } catch (Exception $e) {
+                            echo "Error rendering diagram: " . $e->getMessage();
+                        }
+                        ?>
+                    </div>
+                </div>
+            </div>
+
+            <div id="schema-table-view" style="display: none;">
+                <?php
+                try {
+                    if ($tables) {
+                        foreach ($tables as $tableName) {
+                            echo "<div class='mb-4 border rounded p-3 bg-white shadow-sm'>";
+                            echo "<h6 class='fw-bold text-success'><i class='fas fa-table me-2'></i>Table: $tableName</h6>";
+                            
+                            $schema_res = $pdo->query("DESCRIBE `$tableName` ");
+                            echo "<div class='table-responsive mt-2'>
+                                    <table class='table table-hover table-sm table-bordered mb-0'>
+                                        <thead class='table-dark'>
+                                            <tr><th>Field</th><th>Type</th><th>Null</th><th>Key</th><th>Default</th><th>Extra</th></tr>
+                                        </thead>
+                                        <tbody>";
+                            while($row = $schema_res->fetch(PDO::FETCH_ASSOC)) {
+                                $badge = ($row['Key'] == 'PRI') ? 'badge bg-warning text-dark' : '';
+                                echo "<tr>
+                                        <td class='fw-bold'>{$row['Field']}</td>
+                                        <td><code>{$row['Type']}</code></td>
+                                        <td>{$row['Null']}</td>
+                                        <td><span class='$badge'>{$row['Key']}</span></td>
+                                        <td>" . ($row['Default'] ?? 'NULL') . "</td>
+                                        <td class='small text-muted'>{$row['Extra']}</td>
+                                      </tr>";
+                            }
+                            echo "</tbody></table></div></div>";
+                        }
+                    }
+                } catch (Exception $e) {}
+                ?>
+            </div>
+
+        </div>
+    </div>
+
+<style>
+        /* Mermaid SVG ko shrink hone se rokne ke liye */
+        .mermaid svg {
+            max-width: none !important;
+            width: auto !important;
+            height: auto !important;
+            min-width: 1500px; /* Diagram ki width force karne ke liye */
+        }
+    </style>
+    
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'default',
+            securityLevel: 'loose',
+            /* Ye setting diagram ko chota hone se rokegi */
+            er: {
+                useMaxWidth: false
+            }
+        });
+    </script>
+
+    <script>
+        function toggleSchemaView() {
+            let diagram = document.getElementById('schema-diagram-view');
+            let tables = document.getElementById('schema-table-view');
+            
+            if (diagram.style.display === 'none') {
+                diagram.style.display = 'block';
+                tables.style.display = 'none';
+            } else {
+                diagram.style.display = 'none';
+                tables.style.display = 'block';
+            }
+        }
+    </script>
+<?php endif; ?>                          
+
 <?php if ($page === 'settings' && $_SESSION['role'] === 'admin'): ?>
     <div class="card shadow" style="max-width: 900px; margin: auto;">
         <div class="card-header bg-dark text-white"><i class="fas fa-cogs me-2"></i> System Configuration</div>
@@ -6643,6 +7746,10 @@ const cutoffDay = <?= getSet('cutoff_day') ?: '31' ?>;
                 </div>
 
  <h5 class="text-primary border-bottom pb-2 mt-4">3. Logic & Rules</h5>
+<div class="col-md-4">
+        <label class="fw-bold small">Default Monthly Fee (Rs)</label>
+        <input type="number" name="settings[default_monthly_fee]" class="form-control border-success" value="<?= getSet('default_monthly_fee') ?>" placeholder="e.g. 500, 1000">
+    </div>
                 <div class="row g-3 mb-3">
 <div class="col-md-4">
                         <label class="fw-bold small">Timezone</label>
@@ -6740,6 +7847,10 @@ const cutoffDay = <?= getSet('cutoff_day') ?: '31' ?>;
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <div class="col-md-4">
+    <label class="fw-bold small">Ulama Class Rate (Rs. Per Class)</label>
+    <input type="number" name="settings[ulma_class_rate]" class="form-control border-info" value="<?= getSet('ulma_class_rate') ?: 500 ?>">
+</div>
                 </div>
 <h5 class="text-primary border-bottom pb-2 mt-4">Prize Budget & Denomination Settings</h5>
                 <div class="row g-3 mb-3">
@@ -7886,20 +8997,7 @@ if (is_dir('uploads')) {
         $denominations = array_map('intval', explode(',', $rawDenoms));
         rsort($denominations);
         
-        // Auto-Create Activities Table & Exam Columns dynamically
-        try {
-            $pdo->exec("CREATE TABLE IF NOT EXISTS `activities_records` (
-                `id` INT AUTO_INCREMENT PRIMARY KEY,
-                `session_id` VARCHAR(50),
-                `class_id` VARCHAR(50),
-                `date` DATE,
-                `enrollment_id` INT,
-                `reward_type` VARCHAR(50),
-                `qty` INT
-            )");
-            $pdo->exec("ALTER TABLE exams ADD COLUMN gift_threshold INT DEFAULT 1500");
-            $pdo->exec("ALTER TABLE exams ADD COLUMN gift_deduction INT DEFAULT 1500");
-        } catch (Exception $e) {}
+        
         
         // --- ROLE CHECKS ---
         $canManage = can('manage_exams') || $_SESSION['role'] === 'admin';
@@ -9386,7 +10484,7 @@ ajax: {
 
                     // 2. Initialize Export Tables (Attendance Reports, Fee Reports, etc.)
                     $('.datatable-export:not(#serverSideStudentsTable):not(#feeReportTable):not(#logsTable):not(#reportsTable)').DataTable({
-                        dom: 'Bfrtip',
+                        dom: 'Blfrtip',
                         buttons: ['copy', 'csv', 'excel', 'print'],
                         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
                         pageLength: 10,
@@ -9423,7 +10521,7 @@ ajax: {
                             ],
                             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
                             pageLength: 10,
-                            dom: 'Bfrtip',
+                            dom: 'Blfrtip',
                             buttons: ['excel', 'print'],
                             initComplete: function () {
                                 this.api().columns().every(function () {
@@ -9460,7 +10558,7 @@ ajax: {
                                     return json.data;
                                 }
                             },
-                            dom: 'Bfrtip',
+                            dom: 'Blfrtip',
                             buttons: ['excel', 'print'],
                             order: [[0, 'desc']],
                             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
@@ -9499,7 +10597,7 @@ ajax: {
                                     console.error('AJAX Error:', error, thrown);
                                 }
                             },
-                            dom: 'Bfrtip',
+                            dom: 'Blfrtip',
                             buttons: ['excel', 'print'],
                             order: [[0, 'desc']],
                             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
@@ -9537,7 +10635,7 @@ ajax: {
                                     console.error('AJAX Error:', error, thrown);
                                 }
                             },
-                            dom: 'Bfrtip',
+                            dom: 'Blfrtip',
                             buttons: ['excel', 'print'],
                             order: [[0, 'desc']],
                             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
@@ -9582,7 +10680,7 @@ ajax: {
                                     console.error('AJAX Error:', error, thrown);
                                 }
                             },
-                            dom: 'Bfrtip',
+                            dom: 'Blfrtip',
                             buttons: ['excel', 'print'],
                             order: [[0, 'asc']],
                             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
@@ -9603,7 +10701,7 @@ ajax: {
                                     console.error('AJAX Error:', error, thrown);
                                 }
                             },
-                            dom: 'Bfrtip',
+                            dom: 'Blfrtip',
                             buttons: ['excel', 'print'],
                             order: [[0, 'desc']],
                             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
@@ -9642,7 +10740,7 @@ ajax: {
                                     console.error('AJAX Error:', error, thrown);
                                 }
                             },
-                            dom: 'Bfrtip',
+                            dom: 'Blfrtip',
                             buttons: ['excel', 'print'],
                             order: [[0, 'asc']],
                             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
@@ -9683,7 +10781,7 @@ ajax: {
                             ],
                             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
                             pageLength: 10,
-                            dom: 'Bfrtip',
+                            dom: 'Blfrtip',
                             buttons: ['excel', 'print'],
                             initComplete: function () {
                                 this.api().columns().every(function () {
@@ -9708,7 +10806,7 @@ ajax: {
                                 url: '?action=fetch_certificates',
                                 type: 'GET'
                             },
-                            dom: 'Bfrtip',
+                            dom: 'Blfrtip',
                             buttons: ['excel', 'print'],
                             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                             pageLength: 10,
